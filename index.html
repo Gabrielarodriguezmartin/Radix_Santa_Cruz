@@ -20247,37 +20247,35 @@ function buildWeeklyQuestions() {
         ]
     },
     {
-        pregunta: "Un andamio instalado en el edificio contiguo dificulta el acceso de los proveedores. Algunas entregas llegan tarde y ciertos productos frescos corren el riesgo de no recibirse en buenas condiciones. ¿Cómo respondes?",
+        pregunta: "Una huelga de transportistas amenaza con retrasar durante varios días la llegada de mercancía a Los Llanos. Algunos ingredientes habituales podrían agotarse y los proveedores no garantizan las fechas de entrega. ¿Cómo respondes?",
         opciones: [
-            "Hablas con los proveedores y los responsables de la obra para acordar horarios o un punto de entrega alternativo. Además, revisas las existencias de productos esenciales.",
-            "No cambias la operativa y esperas a que terminen las obras, aunque sigan produciéndose retrasos.",
-            "Aumentas considerablemente los pedidos por adelantado para tener más reservas, sin comprobar el espacio disponible ni la caducidad."
+            "Contactas con tus proveedores para conocer las existencias disponibles, buscas alternativas locales y adaptas temporalmente la carta a los ingredientes que puedes garantizar.",
+            "Mantienes la carta habitual y esperas a que se resuelva la huelga, confiando en que los pedidos lleguen antes de agotar las existencias.",
+            "Realizas compras de emergencia en distintos establecimientos para acumular la mayor cantidad posible de productos, sin revisar su coste ni su rotación."
         ],
         impactos: [
             {
                 movimientos: [
-                    { categoria_pnl: "servicios", dinero: -500 },
-                    { categoria_pnl: "compras", dinero: -200 },
-                    { categoria_pnl: "ingresos_operativos", dinero: 1200 }
+                    { categoria_pnl: "compras", dinero: -400 },
+                    { categoria_pnl: "ingresos_operativos", dinero: 1000 }
                 ],
-                reputacion: 6,
-                feedback: "La coordinación reduce las interrupciones y protege la calidad del producto. Las medidas preventivas cuestan algo, pero ayudan a evitar pérdidas y cancelaciones."
+                reputacion: 7,
+                feedback: "Buscar proveedores alternativos y adaptar la carta permite mantener el servicio y reducir el riesgo de quedarte sin productos esenciales. Aunque algunos ingredientes pueden resultar más caros, la planificación ayuda a controlar las pérdidas y conservar la confianza de los clientes."
             },
             {
                 movimientos: [
-                    { categoria_pnl: "ingresos_operativos", dinero: -2500 },
-                    { categoria_pnl: "compras", dinero: -400 }
+                    { categoria_pnl: "ingresos_operativos", dinero: -2500 }
                 ],
-                reputacion: -7,
-                feedback: "No actuar deja al restaurante expuesto a retrasos, mermas y posibles platos no disponibles. Una incidencia externa requiere una respuesta operativa."
+                reputacion: -8,
+                feedback: "Esperar sin preparar alternativas puede provocar la falta de ingredientes, cambios de última hora y platos no disponibles. Ante una interrupción logística, anticiparse es clave para mantener la actividad y evitar pérdidas de ingresos."
             },
             {
                 movimientos: [
-                    { categoria_pnl: "compras", dinero: -2800 },
-                    { categoria_pnl: "ingresos_operativos", dinero: -500 }
+                    { categoria_pnl: "compras", dinero: -2200 },
+                    { categoria_pnl: "ingresos_operativos", dinero: -300 }
                 ],
                 reputacion: -4,
-                feedback: "Comprar de más puede inmovilizar dinero y aumentar las mermas, especialmente en productos frescos. Es preferible ajustar las existencias según la demanda y la capacidad de almacenamiento."
+                feedback: "Comprar sin comparar precios ni valorar las necesidades reales puede disparar los costes y generar excedentes o desperdicio. Además, acumular productos no garantiza que sean los ingredientes que más necesitas. En una crisis de suministro, conviene priorizar los productos esenciales y ajustar las compras a la demanda prevista."
             }
         ]
     },
@@ -20317,68 +20315,68 @@ function buildWeeklyQuestions() {
         ]
     },
     {
-        pregunta: "El restaurante recibe algunos visitantes, pero quieres consolidar una clientela local y atraer también a personas jóvenes, sin abandonar a tus clientes habituales de más de 50 años. ¿Cómo promocionas el negocio?",
+        pregunta: "Al revisar las ventas de tu restaurante, identificas los meses de menor actividad del año. Quieres crear una estrategia para atraer más clientela y aumentar las ventas durante esa época. ¿Qué decides hacer?",
         opciones: [
-            "Contratas una gestión profesional de redes sociales y contenido sobre la cocina canaria, con campañas dirigidas tanto al público local como a visitantes.",
-            "Colaboras con influencers y creadores de contenido gastronómico, seleccionando perfiles que conecten con el público de Tenerife y midiendo los resultados.",
-            "Desarrollas alianzas con comercios, asociaciones y actividades del barrio, combinadas con promociones para clientes habituales."
+            "Diseñas una campaña para la clientela local, con un menú especial y ventajas para quienes repitan visita en los días de menor demanda. Calculas los márgenes y mides las reservas y las ventas.",
+            "Lanzas grandes descuentos en toda la carta durante la temporada baja y los promocionas en redes sociales para llenar el restaurante, sin calcular cuánto ganas con cada plato.",
+            "Organizas jornadas gastronómicas con productos de la isla y colaboras con comercios y alojamientos de la zona para promocionarlas, ajustando las fechas y los costes a la demanda."
         ],
         impactos: [
             {
                 movimientos: [
-                    { categoria_pnl: "publicidad", dinero: -1800 },
-                    { categoria_pnl: "ingresos_operativos", dinero: 2800 }
+                    { categoria_pnl: "publicidad", dinero: -800 },
+                    { categoria_pnl: "ingresos_operativos", dinero: 2100 }
                 ],
-                reputacion: 7,
-                feedback: "Una comunicación constante puede mejorar la visibilidad y conectar generaciones diferentes. Es importante medir reservas, visitas y ventas para saber si la inversión funciona."
+                reputacion: 8,
+                feedback: "Una propuesta adaptada a la clientela local puede generar visitas recurrentes durante los meses de menor actividad. Controlar los márgenes y medir los resultados te ayuda a comprobar si la campaña es rentable."
             },
             {
                 movimientos: [
-                    { categoria_pnl: "publicidad", dinero: -2500 },
-                    { categoria_pnl: "ingresos_operativos", dinero: 3000 }
+                    { categoria_pnl: "publicidad", dinero: -1200 },
+                    { categoria_pnl: "ingresos_operativos", dinero: 600 }
                 ],
-                reputacion: 6,
-                feedback: "Una colaboración bien elegida puede dar visibilidad al restaurante, aunque el alcance en redes no garantiza ventas. Define el público, las condiciones y cómo medirás los resultados."
+                reputacion: -3,
+                feedback: "Los descuentos pueden atraer más visitas, pero reducen el ingreso por cada plato vendido y la campaña supone un gasto adicional. Sin calcular los márgenes, puedes aumentar la facturación sin mejorar la rentabilidad ni cubrir los costes."
             },
             {
                 movimientos: [
-                    { categoria_pnl: "publicidad", dinero: -700 },
-                    { categoria_pnl: "ingresos_operativos", dinero: 1900 }
+                    { categoria_pnl: "publicidad", dinero: -600 },
+                    { categoria_pnl: "otros_gastos", dinero: -500 },
+                    { categoria_pnl: "ingresos_operativos", dinero: 2000 }
                 ],
                 reputacion: 9,
-                feedback: "La colaboración con el entorno fortalece la relación con el barrio y puede generar recomendaciones de confianza. Es una opción relativamente económica para atraer clientela recurrente."
+                feedback: "Las jornadas gastronómicas y las colaboraciones crean nuevos motivos para visitar el restaurante y refuerzan su vínculo con La Palma. Ajustar los costes y trabajar con reservas ayuda a aprovechar la demanda y a controlar el riesgo económico de la iniciativa."
             }
         ]
     },
     {
-        pregunta: "Durante varios servicios, dos empleados discuten por el reparto de tareas. Uno considera que siempre le toca recoger y limpiar, mientras que el otro cree que está atendiendo más mesas. El conflicto empieza a afectar al ambiente y al servicio. ¿Qué haces?",
+        pregunta: "Durante varios servicios, el jefe de cocina y el jefe de sala discuten porque las comandas salen con errores o a destiempo. Cocina señala que sala transmite los pedidos de forma confusa, mientras que sala se queja de que cocina no respeta los tiempos ni avisa de los retrasos. El conflicto empieza a afectar al equipo y a la clientela. ¿Qué haces?",
         opciones: [
-            "Hablas con ambos por separado y después conjuntamente, revisas el reparto de tareas y estableces responsabilidades claras para cada turno.",
-            "Dejas que lo resuelvan entre ellos mientras sigan sacando el trabajo, para no intervenir en cuestiones personales.",
-            "Cambias inmediatamente los turnos y responsabilidades de ambos sin consultarles, con el objetivo de cortar las discusiones."
+            "Reúnes a ambos, revisáis dónde se producen los fallos y acordáis un procedimiento claro para transmitir las comandas, coordinar los tiempos y comunicar cambios o retrasos.",
+            "Dejas que lo resuelvan entre ellos, porque cada uno es responsable de su área y deberían saber coordinarse.",
+            "Impones que todas las comandas se preparen por orden de llegada y prohíbes que sala pida cambios de prioridad, sin escuchar a los responsables."
         ],
         impactos: [
             {
                 movimientos: [
-                    { categoria_pnl: "personal", dinero: 400 },
-                    { categoria_pnl: "ingresos_operativos", dinero: 1300 }
+                    { categoria_pnl: "ingresos_operativos", dinero: 800 }
                 ],
                 reputacion: 8,
-                feedback: "Escuchar al equipo y definir tareas con claridad ayuda a recuperar la colaboración. Dedicar tiempo a liderar también es una inversión en la calidad del servicio."
+                feedback: "Revisar los fallos con ambos responsables y acordar cómo coordinarse reduce los errores y las esperas. La comunicación entre cocina y sala mejora el ambiente del equipo y la experiencia de la clientela, lo que puede favorecer los ingresos."
             },
             {
                 movimientos: [
-                    { categoria_pnl: "ingresos_operativos", dinero: -1600 }
+                    { categoria_pnl: "ingresos_operativos", dinero: -1200 }
                 ],
                 reputacion: -8,
-                feedback: "Ignorar el conflicto puede normalizar el mal ambiente y perjudicar a clientes y compañeros. Como responsable, debes intervenir antes de que el problema se agrave."
+                feedback: "La falta de intervención permite que continúen los errores, los retrasos y los reproches. Aunque cada responsable dirija su área, necesitas asegurar que cocina y sala trabajen de forma coordinada."
             },
             {
                 movimientos: [
                     { categoria_pnl: "ingresos_operativos", dinero: -500 }
                 ],
                 reputacion: -4,
-                feedback: "Has actuado rápido, pero imponer cambios sin escuchar a las personas puede aumentar la frustración. Es mejor combinar decisiones claras con una explicación justa."
+                feedback: "Has establecido una regla rápida, pero no has identificado el origen de los fallos. Un orden rígido puede dificultar que los platos de una misma mesa salgan juntos o que se atiendan incidencias durante el servicio."
             }
         ]
     },
@@ -20447,69 +20445,69 @@ function buildWeeklyQuestions() {
         ]
     },
     {
-        pregunta: "Antes de firmar el alquiler, visitas un local antiguo que te gusta por su ubicación y precio. Sin embargo, tiene escalones en la entrada, pasillos estrechos y un aseo pequeño. Hacer cambios podría ser caro. ¿Cómo decides?",
+        pregunta: "Un amigo de tu hermano te ofrece un local de condiciones similares al que tenías previsto alquilar, pero en otra ubicación, con un alquiler más barato y mejores condiciones de aparcamiento. ¿Qué decides hacer?",
         opciones: [
-            "Antes de firmar, consultas con un técnico los requisitos de accesibilidad y urbanismo aplicables, solicitas una estimación de las obras y negocias con la propiedad quién asumirá cada coste.",
-            "Firmas el alquiler porque el local es económico y dejas las adaptaciones para más adelante, cuando el restaurante genere ingresos.",
-            "Descartas el local y buscas otro que ya tenga mejores condiciones de accesibilidad, aunque el alquiler sea algo más elevado."
+            "Comparas ambas ubicaciones: visitas la zona, observas el paso de personas y valoras la cercanía a tu clientela, el aparcamiento y el ahorro en alquiler antes de decidir.",
+            "Aceptas la oferta directamente porque el alquiler es más barato y hay más aparcamiento. Al ser un amigo de tu hermano, confías en que será una buena elección.",
+            "Mantienes el local que tenías previsto porque conoces mejor su ubicación y crees que encaja con tu clientela, aunque suponga pagar más y tenga menos aparcamiento."
         ],
         impactos: [
             {
                 movimientos: [
-                    { categoria_pnl: "servicios", dinero: -700 }
-                ],
-                reputacion: 8,
-                feedback: "La revisión técnica previa reduce el riesgo de asumir obras inesperadas o problemas de cumplimiento. Comprueba la normativa aplicable al inmueble y a la actividad antes de comprometerte."
-            },
-            {
-                movimientos: [
-                    { categoria_pnl: "alquiler", dinero: -2400 },
-                    { categoria_pnl: "otros_gastos", dinero: -2800 },
-                    { categoria_pnl: "ingresos_operativos", dinero: -1200 }
-                ],
-                reputacion: -10,
-                feedback: "Firmar sin evaluar las adaptaciones puede provocar costes imprevistos, retrasos y dificultades para atender a parte de la clientela. La accesibilidad debe estudiarse antes de comprometer la inversión."
-            },
-            {
-                movimientos: [
+                    { categoria_pnl: "servicios", dinero: -200 },
                     { categoria_pnl: "alquiler", dinero: -800 }
                 ],
-                reputacion: 6,
-                feedback: "Elegir un local más adecuado puede reducir las obras y facilitar el acceso a más personas. Aun así, conviene comprobar las condiciones reales y el cumplimiento normativo del nuevo espacio."
+                reputacion: 8,
+                feedback: "Comparar las dos ubicaciones te permite valorar el ahorro, el aparcamiento y la cercanía a tu clientela antes de comprometerte. Inviertes algo de tiempo y dinero en decidir con criterio, reduciendo el riesgo de elegir un local poco adecuado."
+            },
+            {
+                movimientos: [
+                    { categoria_pnl: "alquiler", dinero: -800 },
+                    { categoria_pnl: "ingresos_operativos", dinero: -400 }
+                ],
+                reputacion: -5,
+                feedback: "El nuevo local reduce el gasto de alquiler y facilita el aparcamiento, pero la ubicación puede no encajar con tu público. Confiar en quien te lo ofrece sin analizar la zona puede llevarte a perder ventas que no compensen el ahorro."
+            },
+            {
+                movimientos: [
+                    { categoria_pnl: "alquiler", dinero: -1200 }
+                ],
+                reputacion: 5,
+                feedback: "Mantener una ubicación que conoces puede ayudarte a conservar a tu clientela habitual. Sin embargo, asumes un alquiler mayor y menos facilidades de aparcamiento, por lo que debes comprobar que esas ventajas compensan el coste adicional."
             }
         ]
     },
     {
-        pregunta: "Quieres que el restaurante transmita la identidad canaria, con materiales, colores y detalles inspirados en la cultura local. A la vez, buscas un ambiente acogedor para tu clientela habitual de más de 50 años y atractivo para personas jóvenes. También quieres que todo el equipo reciba un trato justo. ¿Qué enfoque eliges?",
+        pregunta: "Estás eligiendo el nombre de tu restaurante. ¿Qué decides hacer?",
         opciones: [
-            "Diseñas un espacio cálido inspirado en Canarias, con buena iluminación, circulación cómoda y elementos tradicionales combinados con detalles actuales. Estableces criterios claros y equitativos para los horarios, las tareas y las oportunidades del equipo.",
-            "Inviertes en una decoración muy moderna pensada para redes sociales, aunque el espacio resulte menos cómodo para parte de la clientela y no revisas cómo se distribuyen las tareas del equipo.",
-            "Mantienes una decoración tradicional con pocos cambios y dejas que cada responsable organice los turnos y las tareas según su propio criterio."
+            "Contratas a una agencia de marketing digital para que desarrolle un nombre acorde con la identidad del restaurante y el público al que quieres llegar.",
+            "Le haces caso a tu primo y llamas al restaurante «Friends», como su serie favorita, sin valorar si encaja con el negocio.",
+            "Sigues el consejo de tu mujer, que considera que gastar dinero en eso es perderlo. Dedicas tiempo a pensar varias opciones y eliges un nombre acorde con la personalidad del restaurante."
         ],
         impactos: [
             {
                 movimientos: [
-                    { categoria_pnl: "otros_gastos", dinero: -2500 },
-                    { categoria_pnl: "ingresos_operativos", dinero: 2200 }
+                    { categoria_pnl: "otros_gastos", dinero: -1500 },
+                    { categoria_pnl: "ingresos_operativos", dinero: 1200 }
                 ],
-                reputacion: 10,
-                feedback: "La combinación de identidad local, comodidad e inclusión puede reforzar la personalidad del restaurante y atraer a distintas generaciones. Los criterios transparentes también favorecen un ambiente laboral más justo."
+                reputacion: 8,
+                feedback: "La agencia te ayuda a desarrollar un nombre coherente con la identidad de tu restaurante y su público. El apoyo profesional facilita la elección, aunque la inversión no garantiza por sí sola más ventas."
             },
             {
                 movimientos: [
-                    { categoria_pnl: "otros_gastos", dinero: -2800 },
-                    { categoria_pnl: "ingresos_operativos", dinero: 900 }
+                    { categoria_pnl: "otros_gastos", dinero: -200 },
+                    { categoria_pnl: "ingresos_operativos", dinero: -500 }
                 ],
                 reputacion: -4,
-                feedback: "Una imagen llamativa puede generar atención inicial, pero no garantiza fidelidad si el espacio no resulta cómodo o la experiencia del cliente no está cuidada. La organización del equipo también importa."
+                feedback: "Has elegido rápido y con poco gasto, pero el gusto de tu primo no tiene por qué coincidir con lo que necesita el negocio. Un nombre poco adecuado puede dificultar la diferenciación y la conexión con el público."
             },
             {
                 movimientos: [
-                    { categoria_pnl: "otros_gastos", dinero: -300 },
-                    { categoria_pnl: "ingresos_operativos", dinero: 400 }
+                    { categoria_pnl: "otros_gastos", dinero: -150 },
+                    { categoria_pnl: "ingresos_operativos", dinero: 300 }
                 ],
-                reputacion: -5,
-                feedback: "Has limitado la inversión, pero no revisar la organización del equipo puede generar desigualdades y conflictos. La tradición puede convivir con mejoras sencillas de comodidad y gestión."
+                reputacion: 6,
+                feedback: "Dedicar tiempo a pensar un nombre acorde con el restaurante te permite construir una identidad propia con una inversión pequeña. Ahorras dinero y puedes obtener un buen resultado si evalúas las opciones con criterio."
             }
         ]
     }
