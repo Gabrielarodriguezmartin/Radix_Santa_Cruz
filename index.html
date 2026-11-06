@@ -236,6 +236,11 @@
     .shm{background:linear-gradient(90deg,var(--gr),var(--gd),var(--gr));background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:sh 4s linear infinite}
 
     @media(max-width:768px){
+      .canvas-wrap.canvas-row1{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important}
+      .canvas-wrap.canvas-row2{grid-template-columns:minmax(0,1fr)!important;gap:8px!important}
+      .canvas-pair{display:contents!important}
+      .canvas-value{grid-column:1/-1}
+      .hi.hi-intro img{height:auto;aspect-ratio:16/9;object-fit:contain;object-position:center;background:#252528}
       .dash{padding:9px 12px}
       .dt{font-size:.72rem;letter-spacing:1.2px;gap:7px;margin-bottom:7px}
       .dt .ic{width:20px;height:20px;font-size:10px}
@@ -725,7 +730,7 @@ function refreshDash(){
 }
 
 function turnImg(t){
-  return '<div class="hi"><img src="'+(G.imgs[t]||G.imgs[0])+'" alt="Fase '+t+'"><div class="ov">📍 Fase '+t+' </div></div>';
+  return '<div class="hi'+(t===0?' hi-intro':'')+'"><img src="'+(G.imgs[t]||G.imgs[0])+'" alt="Fase '+t+'"><div class="ov">📍 Fase '+t+' </div></div>';
 }
 
 function makeOpts(id,opts,cols,wide,multi){
@@ -2302,11 +2307,11 @@ function goPlanCanvas(){
   '</div>'+
 
   // FILA 1: Socios clave | Actividades clave | Propuesta de valor | Relación con clientes | Segmento clientes
-  '<div class="canvas-wrap" style="display:grid;grid-template-columns:1fr 1fr 1.4fr 1fr 1fr;gap:6px;margin-bottom:6px">'+
+  '<div class="canvas-wrap canvas-row1" style="display:grid;grid-template-columns:1fr 1fr 1.4fr 1fr 1fr;gap:6px;margin-bottom:6px">'+
     cBlock('🤝','1. Socios clave',
       '¿Con quién colaboras?\n\n'+(G.collabs||'—')+'\n\nCanales de marketing: '+mktEstr,
       '#E3F2FD','#1565C0')+
-    '<div style="display:grid;grid-template-rows:1fr 1fr;gap:6px">'+
+    '<div class="canvas-pair" style="display:grid;grid-template-rows:1fr 1fr;gap:6px">'+
       cBlock('⚙️','2. Actividades clave',
         'Forma jurídica: '+forma+'\n'+
         'Horario: '+(G.schedule||'—')+'\n'+
@@ -2319,10 +2324,10 @@ function goPlanCanvas(){
         (G.workerSalary?'Salario/empleado: '+fmt(G.workerSalary)+' €':''),
         '#E8F5E9','#2E7D32')+
     '</div>'+
-    cBlock('💡','4. Propuesta de valor',
+    '<div class="canvas-value">'+cBlock('💡','4. Propuesta de valor',
       G.bizDesc||G.bizName||'—',
-      '#FFF8E1','#E65100',true)+
-    '<div style="display:grid;grid-template-rows:1fr 1fr;gap:6px">'+
+      '#FFF8E1','#E65100',true)+'</div>'+
+    '<div class="canvas-pair" style="display:grid;grid-template-rows:1fr 1fr;gap:6px">'+
       cBlock('❤️','5. Relación clientes',
         'Perfil: '+(G.targetDesc||'—')+'\n'+
         'Edad: '+(G.targetAge||'—')+'\n'+
@@ -2342,7 +2347,7 @@ function goPlanCanvas(){
   '</div>'+
 
   // FILA 2: Estructura de costes | Flujos de ingresos
-  '<div class="canvas-wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'+
+  '<div class="canvas-wrap canvas-row2" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'+
     cBlock('💸','8. Estructura de costes',
       'Costes fijos/mes: '+fmt(tc)+' €\n'+
       'Costes variables/mes: '+fmt(tv)+' €\n'+
