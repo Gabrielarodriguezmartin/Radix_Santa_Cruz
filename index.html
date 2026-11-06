@@ -236,14 +236,39 @@
     .shm{background:linear-gradient(90deg,var(--gr),var(--gd),var(--gr));background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:sh 4s linear infinite}
 
     @media(max-width:768px){
-      .sg{grid-template-columns:repeat(2,1fr)}
+      .dash{padding:9px 12px}
+      .dt{font-size:.72rem;letter-spacing:1.2px;gap:7px;margin-bottom:7px}
+      .dt .ic{width:20px;height:20px;font-size:10px}
+      .sg{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+      .st{padding:7px 8px;border-radius:9px;min-width:0}
+      .sl{font-size:.52rem;letter-spacing:.7px;margin-bottom:1px}
+      .sv{font-size:.9rem;gap:3px;white-space:nowrap}
+      .pw{margin-top:7px}
+      .pl{font-size:.6rem;letter-spacing:.7px;margin-bottom:3px}
+      .pt{height:8px}
+      .pm{width:16px;height:16px;border-width:2px}
+      .pp{font-size:.55rem;margin-top:2px}
       .mg,.ops.c2,.ops.c3,.ops.c4,.lg2{grid-template-columns:1fr}
       .hero h1{font-size:2rem}.hero .acc{font-size:2.3rem}
-      .dash{padding:12px 14px}.cd{padding:20px 18px}
+      .cd{padding:20px 18px}
       .per{flex-direction:column;align-items:center;text-align:center}
       .rh h1{font-size:1.6rem}
     }
-    @media(max-width:480px){.sv{font-size:.95rem}.hero h1{font-size:1.6rem}.hero .acc{font-size:1.9rem}.opw{flex-direction:column}}
+    @media(max-width:480px){
+      .dash{padding:7px 8px}
+      .dt{font-size:.58rem;letter-spacing:.65px;gap:5px;margin-bottom:5px}
+      .dt .ic{width:18px;height:18px;font-size:9px}
+      .sg{gap:5px}
+      .st{padding:6px 5px;border-radius:8px}
+      .sl{font-size:.44rem;letter-spacing:.35px}
+      .sv{font-size:.75rem;gap:2px}
+      .pw{margin-top:5px}
+      .pl{font-size:.55rem;letter-spacing:.55px}
+      .pt{height:7px}
+      .pm{width:14px;height:14px}
+      .pp{font-size:.5rem;margin-top:1px}
+      .hero h1{font-size:1.6rem}.hero .acc{font-size:1.9rem}.opw{flex-direction:column}
+    }
     @media print{.dash,.ft{display:none}.cd{break-inside:avoid;box-shadow:none;border:1px solid #ddd}}
 
     /* INTRO VIDEO OVERLAY */
