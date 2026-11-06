@@ -206,6 +206,7 @@
     .radix-savebar .radix-label{font-size:.72rem;color:rgba(255,255,255,.7)}
     .radix-savebar button{padding:8px 18px;font-size:.82rem}
     .radix-save-status{font-size:.72rem;color:rgba(255,255,255,.75);min-width:120px;text-align:left}
+    .radix-savebar.is-scroll-hidden{display:none!important}
     .radix-load-card{max-width:620px;margin:22px auto 0}
     .radix-load-card .fg{margin-bottom:10px}
     .radix-load-error{margin-top:10px}
@@ -240,6 +241,22 @@
       .canvas-wrap.canvas-row2{grid-template-columns:minmax(0,1fr)!important;gap:8px!important}
       .canvas-pair{display:contents!important}
       .canvas-value{grid-column:1/-1}
+      .radix-savebar{margin:5px auto 0;padding:6px 8px;gap:5px;border-radius:8px}
+      .radix-savebar .radix-label{font-size:.58rem}
+      .radix-savebar .radix-code{font-size:.68rem;letter-spacing:.5px}
+      .radix-savebar button{padding:5px 9px;font-size:.68rem}
+      .radix-save-status{flex:0 0 100%;min-width:0;text-align:center;font-size:.58rem}
+      .yearly-donut-grid{grid-template-columns:minmax(0,1fr)!important;gap:12px!important;margin-top:22px!important}
+      .yearly-donut-grid>.cd{min-width:0;margin:0 0 10px;padding:14px!important;overflow:hidden}
+      .plan-cost-grid{grid-template-columns:minmax(0,1fr)!important;gap:10px!important}
+      .plan-cost-grid>div{min-width:0}
+      .plan-metrics-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}
+      .plan-metrics-grid .al{min-width:0;padding:10px 8px;gap:7px}
+      .plan-metrics-grid .al .ai{font-size:1rem}
+      .plan-metrics-grid .al>div{min-width:0;overflow-wrap:anywhere;font-size:.76rem}
+      .plan-final .cd{padding:16px 14px;margin-bottom:14px}
+      .plan-final .cd h2{font-size:1.15rem}
+      .plan-final .tw{margin:8px 0}
       .hi.hi-intro img{height:auto;aspect-ratio:16/9;object-fit:contain;object-position:center;background:#252528}
       .dash{padding:9px 12px}
       .dt{font-size:.72rem;letter-spacing:1.2px;gap:7px;margin-bottom:7px}
@@ -1763,6 +1780,33 @@ function radixActualizarCodigoUI(){
   if(bar) bar.style.display=(G.turn>=1)?'flex':'none';
 }
 
+function radixInstalarComportamientoMovilGuardado(){
+  if(window._radixMobileSaveScrollInstalled)return;
+  window._radixMobileSaveScrollInstalled=true;
+  var ultimaY=Math.max(0,window.pageYOffset||0),direccion=0,distancia=0;
+  window.addEventListener('scroll',function(){
+    var barra=el('radixSaveBar');
+    if(!barra)return;
+    var esMovil=window.matchMedia&&window.matchMedia('(max-width: 768px)').matches;
+    var y=Math.max(0,window.pageYOffset||0);
+    if(!esMovil||y<36){barra.classList.remove('is-scroll-hidden');ultimaY=y;direccion=0;distancia=0;return;}
+    var delta=y-ultimaY;ultimaY=y;
+    if(Math.abs(delta)<1)return;
+    var nuevaDireccion=delta>0?1:-1;
+    if(nuevaDireccion!==direccion){direccion=nuevaDireccion;distancia=0;}
+    distancia+=Math.abs(delta);
+    if(distancia>=8){
+      if(direccion>0)barra.classList.add('is-scroll-hidden');
+      else barra.classList.remove('is-scroll-hidden');
+    }
+  },{passive:true});
+  window.addEventListener('resize',function(){
+    if(!window.matchMedia||!window.matchMedia('(max-width: 768px)').matches){
+      var barra=el('radixSaveBar');if(barra)barra.classList.remove('is-scroll-hidden');
+    }
+  });
+}
+
 function radixGuardarFormularioActual(turn){
   if(!turn || !area() || G.simulationStarted || (turn===10 && G.planScreen && G.planScreen!=='phase10')) return;
   if(!G._pageStates) G._pageStates={};
@@ -2140,6 +2184,7 @@ function radixReanudarPartida(){
 }
 
 radixInstalarAutoGuardado();
+radixInstalarComportamientoMovilGuardado();
 
 function radixPdfReady(){
   return window.html2canvas && window.jspdf && window.jspdf.jsPDF;
@@ -2458,7 +2503,8 @@ function goFinal(){
   var mkLab={A:'Meta Ads (300 €)',B:'Radio local (250 €)',C:(G.localMedia||'Periódico local') + ' (200 €)',D:'Evento apertura (300 €)',E:'Coche con altavoz (150 €)'};
 
   area().innerHTML=
-  '<div class="rh"><p style="font-size:.8rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Plan de Negocio Final</p>'+
+  '<div class="plan-final">'+
+  '<div class="rh"><p style="font-size:.8rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">Plan de Negocio Final</p>'+ 
     '<h1>📋 '+G.bizName+'</h1><p>Generado a partir de tu simulación en 10 fases</p>'+
     '<p style="margin-top:10px"><span class="rb '+barCls+'" style="font-size:1rem">'+barTxt+' — '+G.bar+'%</span></p></div>'+
 
@@ -2507,7 +2553,7 @@ function goFinal(){
     '<tr class="tr-t"><td><strong>TOTAL</strong></td><td><strong>'+fmt(G.totalInvestment)+' €</strong></td></tr></table></div></div>'+
 
   '<div class="cd"><div class="ci cig">📋</div><h2>8. Costes mensuales</h2>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'+
+     '<div class="plan-cost-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px">'+
     '<div><h3>Fijos</h3><div class="tw"><table><tr><th>Concepto</th><th>€</th></tr>'+
       '<tr><td>Alquiler</td><td>'+fmt(G.fixedCosts.rent||0)+'</td></tr>'+
       '<tr><td>SS</td><td>'+fmt(G.fixedCosts.ss||0)+'</td></tr>'+
@@ -2536,7 +2582,7 @@ function goFinal(){
     (G.collabs?'<p><strong>Colaboraciones:</strong> '+G.collabs+'</p>':'')+'</div>'+
 
   '<div class="cd"><div class="ci cig">📈</div><h2>11. Previsiones a 12 meses</h2>'+
-    '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">'+
+     '<div class="plan-metrics-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">'+
       '<div class="al al-i" style="margin:0"><span class="ai">💶</span><div><strong>Facturación</strong><br>'+fmt(G.monthlyRevenue)+' €/mes</div></div>'+
       '<div class="al al-'+(G.monthlyProfit>=0?'s':'d')+'" style="margin:0"><span class="ai">'+(G.monthlyProfit>=0?'✅':'⚠️')+'</span><div><strong>Beneficio</strong><br>'+fmt(G.monthlyProfit)+' €/mes</div></div>'+
       '<div class="al al-i" style="margin:0"><span class="ai">📊</span><div><strong>Margen</strong><br>'+G.profitMargin.toFixed(1)+'%</div></div>'+
@@ -2581,7 +2627,7 @@ function goFinal(){
 
   '<div class="bc" style="margin-top:32px;margin-bottom:36px">'+
     '<button class="btn bs" onclick="guardarPDFPlanFinal()">📄 Guardar Plan en PDF</button><span id="radixPdfStatus" style="align-self:center;font-size:.85rem;font-weight:700"></span>'+
-    '<button class="btn bp" onclick="radixNuevaSimulacion()">🔄 Nueva simulación</button></div>';
+    '<button class="btn bp" onclick="radixNuevaSimulacion()">🔄 Nueva simulación</button></div></div>';
   if(!G._planFinalSaved){ G._planFinalSaved = true; setTimeout(function(){guardarPDFAutomatico('plan_final','03_Plan_de_Negocio_Final.pdf','portrait');},900); }
 }
 
@@ -21456,7 +21502,7 @@ function showYearlyForecast() {
      // DONUTS
      // ==========================
 
-     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:40px">'+
+      '<div class="yearly-donut-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:40px">'+
 
         '<div class="cd" style="padding:24px">'+
             '<h2 style="text-align:center;margin-bottom:20px">💰 Resumen de categorías de ingresos</h2>'+
@@ -21561,10 +21607,11 @@ function showYearlyForecast() {
             responsive:true,
             plugins:{
                 legend:{
-                    position:"right",
+                    position:window.innerWidth<=600?"bottom":"right",
                     labels:{
-                        boxWidth:16,
-                        padding:18
+                        boxWidth:14,
+                        padding:window.innerWidth<=600?8:18,
+                        font:{size:window.innerWidth<=600?10:12}
                     }
                 }
             }
@@ -21622,10 +21669,11 @@ function showYearlyForecast() {
             responsive:true,
             plugins:{
                 legend:{
-                    position:"right",
+                    position:window.innerWidth<=600?"bottom":"right",
                     labels:{
-                        boxWidth:16,
-                        padding:18
+                        boxWidth:14,
+                        padding:window.innerWidth<=600?8:18,
+                        font:{size:window.innerWidth<=600?10:12}
                     }
                 }
             }
