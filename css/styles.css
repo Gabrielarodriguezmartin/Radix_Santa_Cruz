@@ -568,3 +568,17 @@
 .ayuda-juridica-acciones a { text-decoration:none; text-align:center; }
 .ayuda-juridica-sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
 @media(max-width:480px) { .ayuda-juridica { padding:20px; } .ayuda-juridica-acciones { flex-direction:column-reverse; } .ayuda-juridica-acciones a, .ayuda-juridica-acciones form, .ayuda-juridica-acciones button { width:100%; } }
+/* Logo del negocio */
+.logo-opcional { font-size:.73rem; font-weight:600; color:var(--gri,#6a6a6d); }
+.logo-card > p { margin:8px 0; line-height:1.5; }
+.logo-acciones { display:flex; flex-wrap:wrap; gap:10px; margin:14px 0 8px; align-items:center; }
+.logo-acciones a { text-decoration:none; text-align:center; }
+.logo-subir { cursor:pointer; }
+.logo-input { position:absolute; width:1px; height:1px; opacity:0; overflow:hidden; }
+.logo-card:has(.logo-input:focus-visible) .logo-subir { outline:3px solid var(--po); outline-offset:3px; }
+.logo-ayuda,.logo-estado { color:var(--gri,#6a6a6d); font-size:.82rem; }
+.logo-vista:not([hidden]) { display:flex; align-items:center; flex-wrap:wrap; gap:14px; padding:12px; background:#f8f9f9; border:1px solid #dce0e2; border-radius:12px; }
+.logo-vista img { width:100px; height:100px; object-fit:contain; background:#fff; border-radius:8px; }
+.logo-vista[hidden] { display:none; }
+.logo-sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+@media(max-width:480px){ .logo-acciones { align-items:stretch; flex-direction:column; } .logo-acciones a,.logo-subir { width:100%; text-align:center; } }

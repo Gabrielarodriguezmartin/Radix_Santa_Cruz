@@ -57,7 +57,7 @@ var G = {
   name:'',gender:'',age:0,education:'',experience:'',motivation:'',dafo:[0,0,0,0,0],
   bizType:'',bizTypeLabel:'',bizDesc:'',marketNeed:'',mainProduct:'',
   legalForm:'',legalFormLabel:'',objective:'',mission:'',vision:'',
-  bizName:'',sectorExp:false,sectorTraining:false,
+  bizName:'',logoData:'',sectorExp:false,sectorTraining:false,
   targetDesc:'',targetAge:'',targetType:'',targetZone:'',targetIncome:'',targetNeeds:'',igEvent:'',
   locationType:'',locationZone:'',localType:'',reformLevel:'',reformCost:0,
   furniture:'',locationChoice:'',monthlyRent:0,reformCostInput:0,

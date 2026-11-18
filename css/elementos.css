@@ -197,3 +197,7 @@
 :is(#radix-prioridad-estilos, .radix-pdf-vertical) { width:900px; }
 :is(#radix-prioridad-estilos, .radix-pdf-apaisado) { width:1200px; }
 .radix-pdf-clone * { animation:none!important; transition:none!important; }
+:is(#radix-prioridad-estilos, .radix-pdf-cabecera-logo) { display:flex; align-items:center; gap:24px; text-align:left; }
+:is(#radix-prioridad-estilos, .radix-pdf-logo) { display:block; flex:0 0 auto; width:100px; height:100px; object-fit:contain; background:#fff; border-radius:10px; padding:6px; box-sizing:border-box; }
+:is(#radix-prioridad-estilos, .radix-pdf-cabecera-contenido) { flex:1 1 auto; min-width:0; }
+:is(#radix-prioridad-estilos, .radix-pdf-apaisado .radix-pdf-logo) { width:80px; height:80px; }

@@ -272,8 +272,14 @@ function goTurn2(){
       '<div id="nameOpts"></div>'+
     '</div>'+
   '</div>'+
-  // -----------------------------------------------------
-
+  // El logo es opcional y se guarda como parte de la partida.
+  '<div class="cd logo-card"><div class="ci cib">🎨</div><h2>Logo para tu negocio <span class="logo-opcional">Opcional</span></h2>'+
+    '<p>Crea tu logo o sube una imagen que ya tengas. Podrás cambiarlo o quitarlo cuando quieras.</p>'+
+    '<div class="logo-acciones"><a class="btn bs" href="https://free.ai/logo/" target="_blank" rel="noopener noreferrer">✨ Crear un logo con IA en Free.ai <span class="logo-sr">(se abre en una pestaña nueva)</span></a>'+
+    '<label class="btn bp logo-subir" for="f-logo">📁 Subir logo</label><input id="f-logo" class="logo-input" type="file" accept="image/png,image/jpeg"></div>'+
+    '<p class="logo-ayuda">Si creas tu logo en Free.ai, descárgalo en PNG y súbelo aquí. También puedes subir un JPG. Máximo 4 MB; la imagen se reducirá para guardarla con tu partida.</p>'+
+    '<div id="logo-vista" class="logo-vista" hidden><img id="logo-imagen" alt="Vista previa del logo de tu negocio"><button type="button" class="btn bs" id="logo-quitar">Quitar logo</button></div>'+
+    '<p id="logo-estado" class="logo-estado" role="status" aria-live="polite"></p></div>'+
   '<div class="cd"><div class="ci cio">📝</div><h2>Cuéntame tu idea</h2>'+
     '<div class="fg"><label>Describe tu idea de negocio en 2-3 frases</label><textarea id="f-bizdesc" placeholder="¿Qué harás exactamente? ¿Qué ofreces?"></textarea></div>'+
     '<div class="fg"><label>¿Qué necesidad del mercado local cubre?</label><textarea id="f-need" placeholder="¿Qué problema resuelves?"></textarea><div class="hn" id="needHint"></div></div>'+
@@ -291,6 +297,7 @@ function goTurn2(){
     '<div class="fg"><label>¿Formación relacionada?</label>'+makeOpts('sectorTrain',[{v:'si',ic:'🎓',t:'Sí'},{v:'no',ic:'📖',t:'No'}],'c2')+'</div></div>'+
   '<div id="t2fb"></div>'+
   '<div class="bc"><button class="btn bs" data-radix-click="accion8">← Atrás</button><button class="btn bp" data-radix-click="accion9">Continuar a la Fase 3 →</button></div>';
+  radixIniciarLogo();
 }
 
 function genNames(){
@@ -315,6 +322,7 @@ function genNames(){
 }
 
 function saveTurn2(){
+  if(radixLogoEnProceso){var estadoLogo=el('logo-estado'); if(estadoLogo) estadoLogo.textContent='Espera a que termine de procesarse el logo.'; return;}
   radixGuardarFormularioActual(G.turn);
   if(getOpt('legalForm')==='indeciso'){
     el('t2fb').innerHTML='<div id="aviso-forma-pendiente" class="al al-w" role="alert"><span class="ai">⚠️</span><div>Para continuar, selecciona una forma jurídica. Si necesitas ayuda, vuelve a pulsar «No lo tengo claro» y consulta a Leo.</div></div>';
@@ -1124,7 +1132,7 @@ function radixGuardarFormularioActual(turn){
   var fields=root.querySelectorAll('input,select,textarea');
   for(var i=0;i<fields.length;i++){
     var e=fields[i];
-    if(!e.id) continue;
+    if(!e.id || e.type==='file') continue;
     state.fields[e.id]={
       value:e.value,
       checked:!!e.checked,
@@ -1153,7 +1161,7 @@ function radixRestaurarFormulario(turn){
     for(id in state.fields){
       if(!Object.prototype.hasOwnProperty.call(state.fields,id)) continue;
       e=el(id); f=state.fields[id];
-      if(!e) continue;
+      if(!e || e.type==='file') continue;
       if(typeof f.value!=='undefined') e.value=f.value;
       if('checked' in f) e.checked=!!f.checked;
       if(typeof f.selectedIndex==='number' && f.selectedIndex>=0 && typeof e.selectedIndex==='number') e.selectedIndex=f.selectedIndex;
@@ -1501,6 +1509,37 @@ function radixPdfReady(){
 
 function radixWait(ms){ return new Promise(function(resolve){setTimeout(resolve,ms||500);}); }
 
+// Añadir el logo únicamente al documento capturado, sin modificar la pantalla del juego.
+async function radixPrepararLogoPDF(clone, tipo){
+  if (!radixLogoValido(G.logoData)) return;
+  var cabecera = tipo === 'canvas' ? clone.querySelector('[data-radix-estilo="r72"]') :
+    (tipo === 'prevision' || tipo === 'plan_final') ? clone.querySelector('.rh') : null;
+  if (!cabecera) throw new Error('No se encontró la cabecera para el logo del PDF.');
+  var imagen = document.createElement('img');
+  imagen.className = 'radix-pdf-logo';
+  imagen.alt = 'Logo del negocio';
+  imagen.src = G.logoData;
+  try { await imagen.decode(); }
+  catch (error) { throw new Error('No se pudo cargar el logo para el PDF.'); }
+  // html2canvas no respeta object-fit en todos los navegadores. Componer una
+  // imagen cuadrada evita que un logo rectangular se deforme en el PDF.
+  var lienzo = document.createElement('canvas');
+  lienzo.width = 200; lienzo.height = 200;
+  var ctx = lienzo.getContext('2d');
+  var escala = Math.min(176 / imagen.naturalWidth, 176 / imagen.naturalHeight);
+  var ancho = imagen.naturalWidth * escala, alto = imagen.naturalHeight * escala;
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 200, 200);
+  ctx.drawImage(imagen, (200 - ancho) / 2, (200 - alto) / 2, ancho, alto);
+  imagen.src = lienzo.toDataURL('image/png');
+  await imagen.decode();
+  var contenido = document.createElement('div');
+  contenido.className = 'radix-pdf-cabecera-contenido';
+  while (cabecera.firstChild) contenido.appendChild(cabecera.firstChild);
+  cabecera.classList.add('radix-pdf-cabecera-logo');
+  cabecera.appendChild(imagen);
+  cabecera.appendChild(contenido);
+}
+
 async function generarPDFActual(tipo, nombreArchivo, orientacion){
   if(!radixPdfReady()) throw new Error('No se han cargado las librerías de PDF. Comprueba la conexión a Internet.');
   await radixWait(700);
@@ -1510,6 +1549,7 @@ async function generarPDFActual(tipo, nombreArchivo, orientacion){
   var clone=source.cloneNode(true);
   clone.querySelectorAll('.no-print,button,#radixPdfStatus').forEach(function(e){e.remove();});
   clone.classList.add('radix-pdf-clone', orientacion==='landscape'?'radix-pdf-apaisado':'radix-pdf-vertical');
+  await radixPrepararLogoPDF(clone,tipo);
   // Copiar el contenido dibujado de los <canvas> (Chart.js, etc.), ya que
   // cloneNode() clona el elemento pero NO copia los píxeles ya pintados.
   var origCanvases=source.querySelectorAll('canvas');
