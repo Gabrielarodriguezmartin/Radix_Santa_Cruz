@@ -2,6 +2,268 @@ function el(id){ return document.getElementById(id); }
 function fmt(n){ return new Intl.NumberFormat('es-ES',{maximumFractionDigits:2}).format(n); }
 function goTop(){ window.scrollTo({top:0,behavior:'smooth'}); }
 function area(){ return el('gameArea'); }
+function radixEscaparHTML(valor){
+  return String(valor==null?'':valor).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});
+}
+var RADIX_RANGOS_EDAD=[
+  {v:'5-12',min:5,max:12,t:'5-12'},
+  {v:'13-18',min:13,max:18,t:'13-18'},
+  {v:'19-25',min:19,max:25,t:'19-25'},
+  {v:'26-35',min:26,max:35,t:'26-35'},
+  {v:'36-45',min:36,max:45,t:'36-45'},
+  {v:'46-60',min:46,max:60,t:'46-60'},
+  {v:'61+',min:62,max:Infinity,t:'Más de 61'}
+];
+function radixResumenRangosEdad(valores){
+  var seleccionados=RADIX_RANGOS_EDAD.filter(function(r){return valores.indexOf(r.v)>=0;});
+  var grupos=[];
+  seleccionados.forEach(function(r){
+    var ultimo=grupos[grupos.length-1];
+    if(ultimo && Number.isFinite(r.max) && ultimo.max+1===r.min){ultimo.max=r.max;ultimo.etiquetas.push(r.t);}
+    else grupos.push({min:r.min,max:r.max,etiquetas:[r.t]});
+  });
+  return grupos.map(function(g){
+    if(g.max===Infinity)return 'Más de 61';
+    if(g.etiquetas.length===1)return g.etiquetas[0];
+    return g.min+'-'+g.max;
+  }).join(', ');
+}
+function radixExpandirResumenRangosEdad(resumen){
+  var elegidos=[];
+  String(resumen||'').split(',').forEach(function(parte){
+    var texto=parte.trim(), match=texto.match(/^(\d+)\s*-\s*(\d+)$/);
+    if(/^(más de 61|61\+)$/i.test(texto)){elegidos.push('61+');return;}
+    if(!match)return;
+    var min=Number(match[1]),max=Number(match[2]);
+    RADIX_RANGOS_EDAD.forEach(function(r){if(r.min>=min&&Number.isFinite(r.max)&&r.max<=max)elegidos.push(r.v);});
+  });
+  return Array.from(new Set(elegidos));
+}
+function radixHTMLDesplegableEdades(rangosMarcados){
+  var seleccionados=Array.isArray(rangosMarcados)?rangosMarcados:[];
+  var textoSeleccionado=seleccionados.length?radixResumenRangosEdad(seleccionados):'Seleccionar uno o varios rangos';
+  return '<div id="targetAges" class="edad-dropdown-wrap" data-picked=""><details class="edad-dropdown"><summary aria-label="Seleccionar rangos de edad"><span id="edad-seleccion-texto" aria-live="polite"'+(seleccionados.length?'':' class="edad-placeholder"')+'>'+radixEscaparHTML(textoSeleccionado)+'</span></summary><fieldset class="edad-opciones"><legend>Rangos de edad</legend>'+RADIX_RANGOS_EDAD.map(function(r){
+    return '<label><input id="edad-rango-'+r.v+'" type="checkbox" class="edad-check" value="'+r.v+'"'+(seleccionados.indexOf(r.v)>=0?' checked':'')+'><span>'+r.t+'</span></label>';
+  }).join('')+'</fieldset></details></div>';
+}
+function radixActualizarResumenEdad(){
+  var resumen=el('edad-seleccion-texto');
+  var grupo=el('targetAges');
+  if(!resumen||!grupo)return;
+  var valores=Array.from(grupo.querySelectorAll('input[type="checkbox"]:checked')).map(function(c){return c.value;});
+  grupo.setAttribute('data-picked',valores.join(','));
+  resumen.classList.toggle('edad-placeholder',!valores.length&&!G._edadClienteAnterior);
+  if(valores.length){
+    resumen.textContent=radixResumenRangosEdad(valores);
+    G.targetAgeRanges=valores;
+    G.targetAge=radixResumenRangosEdad(valores);
+    delete G._edadClienteAnterior;
+  }else if(G._edadClienteAnterior){
+    resumen.textContent=G._edadClienteAnterior;
+    G.targetAgeRanges=[];
+    G.targetAge=G._edadClienteAnterior;
+  }else{
+    resumen.textContent='Seleccionar uno o varios rangos';
+    G.targetAgeRanges=[];
+    G.targetAge='';
+  }
+}
+function radixEquipamientoNormalizado(){
+  var items=Array.isArray(G.furnitureItems)?G.furnitureItems:[];
+  if(!items.length && G.furniture)items=[{descripcion:G.furniture,categoria:'',cantidad:1,precioUnitario:0,fechaUso:'',valorResidual:0}];
+  return items.map(function(item){return {
+    descripcion:String(item.descripcion||''),
+    categoria:String(item.categoria||''),
+    cantidad:Math.max(0,Number(item.cantidad)||0),
+    precioUnitario:Math.max(0,Number(item.precioUnitario)||0),
+    fechaUso:radixFechaInicioPartida(),
+    valorResidual:0
+  };});
+}
+function radixTotalCosteEquipamiento(){
+  return radixEquipamientoNormalizado().reduce(function(total,item){
+    return total+(item.descripcion?item.cantidad*item.precioUnitario:0);
+  },0);
+}
+function radixPreguntaEquipamiento(){
+  var tipo=String(G.bizTypeLabel||G.bizType||'negocio').trim();
+  var consulta='¿Qué mobiliario y equipamiento necesito para mi negocio de '+tipo+'?';
+  if(G.bizDesc && String(G.bizDesc).trim()) consulta+=' Descripción del negocio: '+String(G.bizDesc).trim()+'.';
+  if(G.mainProduct && String(G.mainProduct).trim()) consulta+=' Producto o servicio principal: '+String(G.mainProduct).trim()+'.';
+  var presencia=getOpt('locType')||G.locationType;
+  var tiposPresencia={fisico:'presencial',online:'online',mixto:'mixto (presencial y online)'};
+  if(tiposPresencia[presencia]) consulta+=' Tipo de negocio: '+tiposPresencia[presencia]+'.';
+  consulta+=' Incluye elementos básicos y herramientas necesarias.';
+  return consulta;
+}
+function radixAbrirAyudaEquipamiento(){
+  var dialogo=document.getElementById('ayuda-equipamiento');
+  if(!dialogo){
+    dialogo=document.createElement('dialog');
+    dialogo.id='ayuda-equipamiento';
+    dialogo.setAttribute('aria-labelledby','titulo-ayuda-equipo');
+    dialogo.innerHTML='<div class="ayuda-juridica"><div class="ayuda-juridica-cabecera"><span class="ayuda-juridica-icono" aria-hidden="true">🔎</span><div><p class="ayuda-juridica-etiqueta">MOBILIARIO Y EQUIPAMIENTO</p><h2 id="titulo-ayuda-equipo">Busca ideas para tu negocio</h2></div></div><p>Hemos preparado una pregunta con los datos de tu negocio. Puedes modificarla antes de copiarla o buscarla en Google.</p><div class="ayuda-juridica-pregunta"><label for="pregunta-equipo">Tu pregunta:</label><textarea id="pregunta-equipo" rows="5"></textarea><button type="button" class="btn bs" id="copiar-pregunta-equipo">Copiar pregunta</button><p id="estado-copia-equipo" role="status" aria-live="polite"></p></div><p class="ayuda-juridica-nota">Al abrir Google se enviará el texto de la pregunta que aparece arriba.</p><div class="ayuda-juridica-acciones"><form method="dialog"><button class="btn bs">Volver</button></form><a class="btn bp" id="buscar-pregunta-equipo" target="_blank" rel="noopener noreferrer">Buscar en Google ↗</a></div></div>';
+    document.body.appendChild(dialogo);
+    var pregunta=dialogo.querySelector('#pregunta-equipo'), enlace=dialogo.querySelector('#buscar-pregunta-equipo'), estado=dialogo.querySelector('#estado-copia-equipo');
+    function actualizarEnlace(){enlace.href='https://www.google.com/search?q='+encodeURIComponent(pregunta.value.trim());}
+    pregunta.addEventListener('input',actualizarEnlace);
+    dialogo.querySelector('#copiar-pregunta-equipo').addEventListener('click',async function(){
+      try{if(!navigator.clipboard || !navigator.clipboard.writeText)throw new Error('Portapapeles no disponible');await navigator.clipboard.writeText(pregunta.value);estado.textContent='Pregunta copiada.';}
+      catch(error){pregunta.focus();pregunta.select();estado.textContent='Pregunta seleccionada: cópiala con Ctrl+C o con el menú de tu dispositivo.';}
+    });
+    dialogo.addEventListener('close',function(){dialogo.remove();});
+    pregunta.value=radixPreguntaEquipamiento();actualizarEnlace();
+  }
+  if(!dialogo.open)dialogo.showModal();
+}
+function radixFechaInicioPartida(){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(G.fechaInicioPartida||''))){
+    var hoy=new Date();
+    G.fechaInicioPartida=hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0')+'-'+String(hoy.getDate()).padStart(2,'0');
+  }
+  return G.fechaInicioPartida;
+}
+var RADIX_COEFICIENTES_AMORTIZACION={
+  irpf:{
+    'Edificios y otras construcciones':{coef:3,vida:68},
+    'Instalaciones, mobiliario, enseres y resto del inmovilizado material':{coef:10,vida:20},
+    'Maquinaria':{coef:12,vida:18},
+    'Elementos de Transporte':{coef:16,vida:14},
+    'Equipos para tratamiento de la información y sistemas y programas informáticos':{coef:26,vida:10},
+    'Útiles y herramientas':{coef:30,vida:8}
+  },
+  sociedades:{
+    'Edificios y otras construcciones':{coef:2,vida:100},
+    'Instalaciones, mobiliario, enseres y resto del inmovilizado material':{coef:10,vida:20},
+    'Maquinaria':{coef:12,vida:18},
+    'Elementos de Transporte':{coef:16,vida:14},
+    'Equipos para tratamiento de la información y sistemas y programas informáticos':{coef:25,vida:8},
+    'Útiles y herramientas':{coef:25,vida:8}
+  }
+};
+function radixRegimenAmortizacion(){
+  return ['autonomo','cb'].indexOf(G.legalForm)>=0?'irpf':'sociedades';
+}
+function radixRegimenAmortizacionEtiqueta(){
+  return radixRegimenAmortizacion()==='irpf'?'IRPF · estimación directa simplificada (tabla orientativa)':'Impuesto sobre Sociedades (tabla general orientativa)';
+}
+function radixCoeficienteAmortizacion(categoria, descripcion, regimen){
+  var regimenAplicado=regimen||radixRegimenAmortizacion();
+  var tabla=RADIX_COEFICIENTES_AMORTIZACION[regimenAplicado]||RADIX_COEFICIENTES_AMORTIZACION.sociedades;
+  var texto=String(descripcion||'');
+  if(regimenAplicado==='sociedades' && categoria==='Edificios y otras construcciones' && /industrial/i.test(texto))return {coef:3,vida:68};
+  if(regimenAplicado==='sociedades' && categoria==='Equipos para tratamiento de la información y sistemas y programas informáticos' && /(programa|software|sistema inform[aá]tico)/i.test(texto))return {coef:33,vida:6};
+  return tabla[categoria]||null;
+}
+function radixRedondearEuros(valor){return Math.round((valor+Number.EPSILON)*100)/100;}
+function calcularCuadroAmortizacion(items, regimen, anioInicio, fechaInicio){
+  var anios=Array.from({length:16},function(_,i){return anioInicio+i;});
+  var cuentas=[], resumen={coste:0,amortizacionPrimerAnio:0,amortizacionTotal:0,valorPendiente:0};
+  var fecha=/^\d{4}-\d{2}-\d{2}$/.test(String(fechaInicio||''))?fechaInicio:anioInicio+'-01-01';
+  var fechaObj=new Date(fecha+'T00:00:00'), mesesPrimerAnio=12-fechaObj.getMonth();
+  (Array.isArray(items)?items:[]).forEach(function(item){
+    var importe=radixRedondearEuros(Math.max(0,Number(item.cantidad)||0)*Math.max(0,Number(item.precioUnitario)||0));
+    if(!item.descripcion||importe<=0)return;
+    var regla=radixCoeficienteAmortizacion(item.categoria,item.descripcion,regimen);
+    var coeficiente=regla?regla.coef:0, cuotas=[], acumulada=0, restante=importe;
+    anios.forEach(function(anio,indice){
+      var cuota=0;
+      if(regla && restante>0){
+        cuota=indice===0?importe*(coeficiente/100)*(mesesPrimerAnio/12):importe*(coeficiente/100);
+        cuota=radixRedondearEuros(Math.min(restante,cuota));
+        restante=radixRedondearEuros(Math.max(0,restante-cuota));
+        acumulada=radixRedondearEuros(acumulada+cuota);
+      }
+      cuotas.push(cuota);
+    });
+    var diferencia=radixRedondearEuros(Math.max(0,importe-acumulada));
+    cuentas.push({partidaContable:'',bien:item.descripcion,fechaAdquisicion:fecha,coeficiente:coeficiente,importe:importe,cuotas:cuotas,acumulada:acumulada,diferencia:diferencia});
+    resumen.coste+=importe;
+    resumen.amortizacionPrimerAnio+=cuotas[0]||0;
+    resumen.amortizacionTotal+=acumulada;
+    resumen.valorPendiente+=diferencia;
+  });
+  resumen.amortizacionPrimerAnio=radixRedondearEuros(resumen.amortizacionPrimerAnio);
+  resumen.amortizacionTotal=radixRedondearEuros(resumen.amortizacionTotal);
+  resumen.valorPendiente=radixRedondearEuros(resumen.valorPendiente);
+  resumen.coste=radixRedondearEuros(resumen.coste);
+  return {anios:anios,cuentas:cuentas,resumen:resumen,regimen:regimen};
+}
+function radixCuadroActual(){
+  var fecha=radixFechaInicioPartida();
+  return calcularCuadroAmortizacion(radixEquipamientoNormalizado(),radixRegimenAmortizacion(),Number(fecha.slice(0,4)),fecha);
+}
+function radixRenderEquipamiento(){
+  var cuerpo=el('f-equipamiento-body');
+  if(!cuerpo)return;
+  var items=radixEquipamientoNormalizado();
+  if(!items.length)items=[{descripcion:'',categoria:'',cantidad:1,precioUnitario:0}];
+  var categorias=[
+    'Edificios y otras construcciones',
+    'Instalaciones, mobiliario, enseres y resto del inmovilizado material',
+    'Maquinaria',
+    'Elementos de Transporte',
+    'Equipos para tratamiento de la información y sistemas y programas informáticos',
+    'Útiles y herramientas'
+  ];
+  cuerpo.innerHTML=items.map(function(item,i){
+    var opciones='<option value="">Selecciona categoría</option>'+categorias.map(function(c){return '<option value="'+radixEscaparHTML(c)+'"'+(item.categoria===c?' selected':'')+'>'+radixEscaparHTML(c)+'</option>';}).join('');
+    var total=item.cantidad*item.precioUnitario;
+    return '<article class="equipo-fila">'+
+      '<div class="equipo-cabecera"><label for="eq-desc-'+i+'">Descripción del producto</label><button type="button" class="equipo-quitar" data-radix-click="quitarEquipo" data-equipo-indice="'+i+'" aria-label="Eliminar producto '+(i+1)+'">×</button></div>'+
+      '<input id="eq-desc-'+i+'" type="text" data-equipo-campo="descripcion" data-equipo-indice="'+i+'" value="'+radixEscaparHTML(item.descripcion)+'" placeholder="Ej.: Mesa de trabajo">'+
+      '<label class="equipo-categoria" for="eq-cat-'+i+'">Categoría<select id="eq-cat-'+i+'" data-equipo-campo="categoria" data-equipo-indice="'+i+'">'+opciones+'</select></label>'+
+      '<div class="equipo-metricas">'+
+        '<label for="eq-cant-'+i+'">Cantidad<input id="eq-cant-'+i+'" type="number" data-equipo-campo="cantidad" data-equipo-indice="'+i+'" min="0" step="1" value="'+item.cantidad+'"></label>'+
+        '<label for="eq-precio-'+i+'">Precio unitario<input id="eq-precio-'+i+'" type="number" data-equipo-campo="precioUnitario" data-equipo-indice="'+i+'" min="0" step="0.01" value="'+item.precioUnitario+'"></label>'+
+        '<div class="equipo-total-fila"><span>Precio total</span><output data-equipo-total="'+i+'">'+fmt(total)+' €</output></div>'+
+      '</div>'+
+      '</article>';
+  }).join('');
+  G.furnitureItems=items;
+  cuerpo.querySelectorAll('[data-equipo-campo]').forEach(function(campo){campo.addEventListener('input',radixSincronizarEquipamiento);campo.addEventListener('change',radixSincronizarEquipamiento);});
+  radixActualizarTotalEquipamiento();
+}
+function radixActualizarTotalEquipamiento(){
+  var filas=area()?area().querySelectorAll('[data-equipo-campo="cantidad"]'):[];
+  var total=0;
+  for(var i=0;i<filas.length;i++){
+    var indice=filas[i].getAttribute('data-equipo-indice');
+    var precio=area().querySelector('[data-equipo-campo="precioUnitario"][data-equipo-indice="'+indice+'"]');
+    var subtotal=(Number(filas[i].value)||0)*(Number(precio&&precio.value)||0);
+    total+=subtotal;
+    var salida=area().querySelector('[data-equipo-total="'+indice+'"]');
+    if(salida)salida.textContent=fmt(subtotal)+' €';
+  }
+  var etiqueta=el('f-equipamiento-total');
+  if(etiqueta)etiqueta.textContent=fmt(total)+' €';
+}
+function radixSincronizarEquipamiento(){
+  var filas=area()?area().querySelectorAll('[data-equipo-campo]'):[];
+  var items=[];
+  for(var i=0;i<filas.length;i++){
+    var indice=Number(filas[i].getAttribute('data-equipo-indice'));
+    if(!items[indice])items[indice]={descripcion:'',categoria:'',cantidad:0,precioUnitario:0};
+    var campo=filas[i].getAttribute('data-equipo-campo');
+    items[indice][campo]=campo==='cantidad'||campo==='precioUnitario'?(Number(filas[i].value)||0):filas[i].value;
+  }
+  G.furnitureItems=items.filter(Boolean);
+  G.furniture=G.furnitureItems.filter(function(i){return i.descripcion;}).map(function(i){return i.descripcion;}).join('; ');
+  radixActualizarTotalEquipamiento();
+}
+function radixAgregarEquipo(){
+  radixSincronizarEquipamiento();
+  G.furnitureItems.push({descripcion:'',categoria:'',cantidad:1,precioUnitario:0});
+  radixRenderEquipamiento();
+  radixProgramarAutoGuardado();
+}
+function radixQuitarEquipo(event,element){
+  radixSincronizarEquipamiento();
+  var indice=Number(element.getAttribute('data-equipo-indice'));
+  G.furnitureItems.splice(indice,1);
+  radixRenderEquipamiento();
+  radixProgramarAutoGuardado();
+}
 
 function refreshDash(){
   el('d-turn').innerHTML='🎯 '+G.turn+' / 10';
@@ -51,6 +313,8 @@ function pickOpt(gid,e){
     if(getOpt('legalForm')==='indeciso') abrirAyudaFormaJuridica();
     else if(el('aviso-forma-pendiente')) el('aviso-forma-pendiente').remove();
   }
+  if(gid==='sectorExp'||gid==='sectorTrain')radixActualizarAvisoFormacion();
+  if(gid==='targetGender')G.targetGender=getOpt('targetGender');
   if(gid==='weekEv') radixProgresoSemana().selected=getOpt('weekEv');
   radixProgramarAutoGuardado();
 }
@@ -79,6 +343,8 @@ function pickOptMulti(gid,e){
   var vals=[];
   for(var i=0;i<all.length;i++) vals.push(all[i].getAttribute('data-v'));
   par.setAttribute('data-picked',vals.join(','));
+  if(gid==='targetAges')radixActualizarResumenEdad();
+  if(gid==='targetGender')G.targetGender=getOpt('targetGender');
   radixProgramarAutoGuardado();
 }
 
@@ -91,6 +357,12 @@ function getOpt(id){
 function getOptMulti(id){
   var v=getOpt(id);
   return v?v.split(','):[];
+}
+function radixActualizarAvisoFormacion(){
+  var aviso=el('formacion-ayuda');
+  if(!aviso)return;
+  var mostrar=getOpt('sectorExp')==='no'||getOpt('sectorTrain')==='no';
+  aviso.innerHTML=mostrar?'<div class="al al-i" role="status"><span class="ai">🎓</span><div>El Gobierno de Canarias te ayuda a formarte en el sector. Encuentra el curso que mejor se adapte a tus necesidades<br><a class="enlace-formacion" href="https://www3.gobiernodecanarias.org/empleo/buscur/" target="_blank" rel="noopener noreferrer">Buscar cursos de formación</a></div></div>':'';
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -152,7 +424,7 @@ function goTurn0(){
   '<p>Cada decisión que tomes tendrá un impacto en la evolución de tu empresa. Gestionarás ingresos y gastos, resolverás situaciones reales, afrontarás imprevistos y aprenderás a transformar una idea en un proyecto empresarial sólido. Al finalizar, habrás construido tu propio Plan de Negocio, elaborado mediante la metodología Business Model Canvas, una de las herramientas más utilizadas a nivel internacional para diseñar y validar modelos de negocio.</p>'+
 
   '</div>'+
-  '<div class="bc"><button class="btn bp" data-radix-click="accion3">🚀 ¡Estoy listo! Comenzar →</button></div>'+ 
+  '<div class="bc"><button class="btn bp" data-radix-click="accion3">🚀 ¡Estoy listo! Comenzar →</button></div>'+
   '<div class="cd radix-load-card">'+
     '<div class="ci cib">💾</div>'+
     '<h2>Continuar una partida</h2>'+
@@ -169,6 +441,7 @@ function goTurn0(){
    FASE 1 — EL EMPRENDEDOR
    ════════════════════════════════════════════════════════════ */
 function goTurn1(){
+  if(!G.fechaInicioPartida)radixFechaInicioPartida();
   G.turn=1;refreshDash();radixActualizarCodigoUI();goTop();
   var dafoQ=[
     {q:'1. Ante un problema inesperado en tu negocio, ¿qué haces?',opts:[
@@ -242,6 +515,8 @@ function saveTurn1(){
    FASE 2 — EL NEGOCIO
    ════════════════════════════════════════════════════════════ */
 function goTurn2(){
+  var estadoNombreFase=G._pageStates && G._pageStates['2'];
+  if(G.nameIdeasGenerated || (estadoNombreFase && estadoNombreFase.nameIdeasGenerated)) G.nameIdeasGenerated=true;
   G.turn=2;refreshDash();radixActualizarCodigoUI();goTop();
   var bizTypes=[
     {v:'comercio',ic:'🛍️',t:'Comercio',d:'Tienda física o venta de productos'},
@@ -265,7 +540,7 @@ function goTurn2(){
   // --- SECCIÓN DE NOMBRE DESPUÉS DEL TIPO ---
   '<div class="cd" id="nameCard"><div class="ci cio">✨</div><h2>Nombre para tu negocio</h2>'+
     '<div class="fg"><label>Escribe el nombre que quieras para tu negocio</label><input type="text" id="f-custom" placeholder="Ej: Radix"></div>'+
-    '<button class="btn bs" data-radix-estilo="r12" data-radix-click="accion7">✨ Generar ideas de nombres</button>'+
+    '<button class="btn bs" id="btn-generar-nombres" data-radix-estilo="r12" data-radix-click="accion7"'+(G.nameIdeasGenerated?' hidden':'')+'>✨ Generar ideas de nombres</button>'+
     '<div id="nameFb"></div>'+
     '<div id="nameBox" data-radix-estilo="r13">'+
       '<p data-radix-estilo="r14">O elige una de estas propuestas (borra el texto de arriba para usarlas):</p>'+
@@ -275,9 +550,9 @@ function goTurn2(){
   // El logo es opcional y se guarda como parte de la partida.
   '<div class="cd logo-card"><div class="ci cib">🎨</div><h2>Logo para tu negocio <span class="logo-opcional">Opcional</span></h2>'+
     '<p>Crea tu logo o sube una imagen que ya tengas. Podrás cambiarlo o quitarlo cuando quieras.</p>'+
-    '<div class="logo-acciones"><a class="btn bs" href="https://free.ai/logo/" target="_blank" rel="noopener noreferrer">✨ Crear un logo con IA en Free.ai <span class="logo-sr">(se abre en una pestaña nueva)</span></a>'+
+    '<div class="logo-acciones"><a class="btn bs" href="https://felo.ai/es/tools/ai-logo-generator" target="_blank" rel="noopener noreferrer">✨ Crear un logo con IA en Felo AI <span class="logo-sr">(se abre en una pestaña nueva)</span></a>'+
     '<label class="btn bp logo-subir" for="f-logo">📁 Subir logo</label><input id="f-logo" class="logo-input" type="file" accept="image/png,image/jpeg"></div>'+
-    '<p class="logo-ayuda">Si creas tu logo en Free.ai, descárgalo en PNG y súbelo aquí. También puedes subir un JPG. Máximo 4 MB; la imagen se reducirá para guardarla con tu partida.</p>'+
+    '<p class="logo-ayuda">Si creas tu logo en Felo AI, descárgalo en PNG y súbelo aquí. También puedes subir un JPG. Máximo 4 MB; la imagen se reducirá para guardarla con tu partida.</p>'+
     '<div id="logo-vista" class="logo-vista" hidden><img id="logo-imagen" alt="Vista previa del logo de tu negocio"><button type="button" class="btn bs" id="logo-quitar">Quitar logo</button></div>'+
     '<p id="logo-estado" class="logo-estado" role="status" aria-live="polite"></p></div>'+
   '<div class="cd"><div class="ci cio">📝</div><h2>Cuéntame tu idea</h2>'+
@@ -294,13 +569,27 @@ function goTurn2(){
     '<div class="fg"><label>Visión</label><input type="text" id="f-vision" placeholder="¿Dónde ves tu negocio en 5 años?"></div></div>'+
   '<div class="cd"><div class="ci cib">📚</div><h2>Experiencia y formación</h2>'+
     '<div class="fg"><label>¿Experiencia previa en este sector?</label>'+makeOpts('sectorExp',[{v:'si',ic:'✅',t:'Sí'},{v:'no',ic:'❌',t:'No'}],'c2')+'</div>'+
-    '<div class="fg"><label>¿Formación relacionada?</label>'+makeOpts('sectorTrain',[{v:'si',ic:'🎓',t:'Sí'},{v:'no',ic:'📖',t:'No'}],'c2')+'</div></div>'+
+    '<div class="fg"><label>¿Formación relacionada?</label>'+makeOpts('sectorTrain',[{v:'si',ic:'🎓',t:'Sí'},{v:'no',ic:'📖',t:'No'}],'c2')+'</div><div id="formacion-ayuda"></div></div>'+
   '<div id="t2fb"></div>'+
   '<div class="bc"><button class="btn bs" data-radix-click="accion8">← Atrás</button><button class="btn bp" data-radix-click="accion9">Continuar a la Fase 3 →</button></div>';
+  var campoNombre=el('f-custom');
+  if(campoNombre) campoNombre.addEventListener('input',radixDesmarcarNombreGeneradoSiHayTexto);
   radixIniciarLogo();
 }
 
-function genNames(){
+function radixDesmarcarNombreGeneradoSiHayTexto(){
+  var campo=el('f-custom');
+  var opciones=el('bizName');
+  if(!campo || !campo.value.trim() || !opciones) return;
+  opciones.setAttribute('data-picked','');
+  var seleccionadas=opciones.querySelectorAll('.op.sel');
+  for(var i=0;i<seleccionadas.length;i++) seleccionadas[i].classList.remove('sel');
+  if(G._pageStates && G._pageStates['2'] && G._pageStates['2'].options){
+    G._pageStates['2'].options.bizName='';
+  }
+}
+
+function genNames(persistir){
   var t=getOpt('bizType');
   if(!t){el('nameFb').innerHTML='<div class="al al-w"><span class="ai">⚠️</span>Selecciona primero el tipo de negocio arriba.</div>';return;}
   el('nameFb').innerHTML=''; // Limpiamos la alerta si todo va bien
@@ -317,8 +606,17 @@ function genNames(){
   var list=nm[t]||nm.otro;
   var opts=[];
   for(var i=0;i<list.length;i++) opts.push({v:list[i],ic:'💫',t:list[i],d:''});
+  G.nameIdeasGenerated=true;
+  if(G._pageStates && G._pageStates['2']) G._pageStates['2'].nameIdeasGenerated=true;
+  var botonGenerar=el('btn-generar-nombres');
+  if(botonGenerar) botonGenerar.hidden=true;
   radixFijarEstilo(el('nameBox'),'display','block');
   el('nameOpts').innerHTML=makeOpts('bizName',opts,'c3',false);
+  if(persistir){
+    radixGuardarFormularioActual(2);
+    G._pageStates['2'].nameIdeasGenerated=true;
+    radixProgramarAutoGuardado();
+  }
 }
 
 function saveTurn2(){
@@ -363,7 +661,11 @@ function goTurn3(){
   '<div class="bn"><h2>Fase 3 — El Cliente Objetivo</h2><p><strong>'+G.name+'</strong>, ya tenemos <strong>"'+G.bizName+'"</strong>. Ahora la pregunta clave: ¿a quién le vendes?</p></div>'+
   '<div class="cd"><div class="ci cio">🎯</div><h2>Define a tu cliente ideal</h2>'+
     '<div class="fg"><label>Describe a tu público objetivo</label><textarea id="f-target" placeholder="¿Quiénes son tus clientes ideales?"></textarea></div>'+
-    '<div class="fg"><label>Rango de edad del cliente ideal</label><select id="f-tage"><option value="">Selecciona...</option><option>16-25 años</option><option>25-35 años</option><option>35-50 años</option><option>50-65 años</option><option>65+ años</option><option>Todas las edades</option></select></div></div>'+
+    '<div class="fg"><label id="label-edades-cliente">Rango de edad del cliente habitual</label>'+
+    radixHTMLDesplegableEdades(G.targetAgeRanges||[])+
+    '</div><div class="fg"><label for="targetGender">Género del cliente habitual</label>'+
+    '<select id="targetGender" data-picked=""><option value="hombre">Hombre</option><option value="mujer">Mujer</option><option value="indiferente">Indiferente</option></select>'+
+    '<p class="hn">Indica Hombre o Mujer solo si estimas que más del 80 % de tus clientes se ajustará a ese perfil. Si no, selecciona Indiferente.</p></div></div>'+
   '<div class="cd"><div class="ci cig">🏝️</div><h2>¿Turista o residente?</h2>'+
     makeOpts('targetType',[
       {v:'turista',ic:'✈️',t:'Principalmente turista',d:'Ticket medio más alto. Estacionalidad. Marketing en alemán/inglés.'},
@@ -394,12 +696,36 @@ function goTurn3(){
     ],'c3')+'</div>'+
   '<div id="t3fb"></div>'+
   '<div class="bc"><button class="btn bs" data-radix-click="accion10">← Atrás</button><button class="btn bp" data-radix-click="accion11">Continuar a la Fase 4 →</button></div>';
+  var grupoEdades=el('targetAges');
+  var rangosGuardados=Array.isArray(G.targetAgeRanges)?G.targetAgeRanges:[];
+  if(!rangosGuardados.length && G.targetAge){
+    var rangoAnterior=radixExpandirResumenRangosEdad(G.targetAge);
+    if(rangoAnterior.length)rangosGuardados=rangoAnterior;
+    else G._edadClienteAnterior=G.targetAge;
+  }
+  if(grupoEdades){
+    grupoEdades.setAttribute('data-picked',rangosGuardados.join(','));
+    grupoEdades.querySelectorAll('input[type="checkbox"]').forEach(function(c){c.checked=rangosGuardados.indexOf(c.value)>=0;c.addEventListener('change',radixActualizarResumenEdad);});
+  }
+  if(el('targetGender')){
+    G.targetGender=G.targetGender||'indiferente';
+    el('targetGender').value=G.targetGender;
+    el('targetGender').setAttribute('data-picked',G.targetGender);
+    el('targetGender').addEventListener('change',function(){
+      this.setAttribute('data-picked',this.value);
+      G.targetGender=this.value;
+      radixProgramarAutoGuardado();
+    });
+  }
+  radixActualizarResumenEdad();
 }
 
 function saveTurn3(){
   radixGuardarFormularioActual(G.turn);
   G.targetDesc=el('f-target').value.trim();
-  G.targetAge=el('f-tage').value;
+  G.targetAgeRanges=getOptMulti('targetAges');
+  G.targetAge=G.targetAgeRanges.length?radixResumenRangosEdad(G.targetAgeRanges):(G._edadClienteAnterior||'');
+  G.targetGender=getOpt('targetGender')||'indiferente';
   G.targetType=getOpt('targetType');
   G.targetZone=getOpt('targetZone');
   G.targetIncome=getOpt('targetIncome');
@@ -432,21 +758,21 @@ function goTurn4(){
   var lics=licMap[G.bizType]||licMap.otro;
   var licHTML='';
   var licHtml='';for(var i=0;i<lics.length;i++)licHtml+='<li>'+lics[i]+'</li>';
-  
+
   area().innerHTML=turnImg(4)+
   '<div class="bn"><h2>Fase 4 — Ubicación y Local</h2><p><strong>'+G.name+'</strong>, ¿dónde se instalará <strong>"'+G.bizName+'"</strong>?</p></div>'+
-  
+
   // SECCIÓN 1: SELECCIÓN DE ISLA Y MUNICIPIO (NUEVO)
   '<div class="cd"><div class="ci cio">🏝️</div><h2>¿En qué isla y municipio emprendes?</h2>'+
     '<p data-radix-estilo="r17">Tu isla determina el contexto local de precios de alquiler y medios de comunicación en las siguientes fases.</p>'+
     makeOpts('islaChoice',[
-      {v:'tenerife',   ic:'🌴', t:'Tenerife',        d:''},
-      {v:'grancanaria',ic:'🏖️', t:'Gran Canaria',     d:''},
-      {v:'lanzarote',  ic:'🌵', t:'Lanzarote',        d:''},
-      {v:'fuerteventura',ic:'🐪',t:'Fuerteventura',   d:''},
+      {v:'tenerife',   ic:'🏔️', t:'Tenerife',        d:''},
+      {v:'grancanaria',ic:'🏢', t:'Gran Canaria',     d:''},
+      {v:'lanzarote',  ic:'🐪', t:'Lanzarote',        d:''},
+      {v:'fuerteventura',ic:'🏖️',t:'Fuerteventura',   d:''},
       {v:'lapalma',    ic:'🌿', t:'La Palma',          d:''},
       {v:'lagomera',   ic:'🌲', t:'La Gomera',         d:''},
-      {v:'elhierro',   ic:'💚', t:'El Hierro',          d:''}
+      {v:'elhierro',   ic:'🦎', t:'El Hierro',          d:''}
     ],'c4')+
     '<div class="fg hidden" id="munBox" data-radix-estilo="r18"><label>Selecciona tu municipio</label>'+
     '<select id="munSelect" data-radix-estilo="r19"><option value="">Selecciona...</option></select></div>'+
@@ -458,7 +784,7 @@ function goTurn4(){
       {v:'online',ic:'🌐',t:'Online',d:'100% digital'},
       {v:'mixto',ic:'🔄',t:'Mixto',d:'Local + presencia online'}
     ],'c3')+'</div>'+
-    
+
   '<div class="cd"><div class="ci cig">📍</div><h2>Ubicación</h2>'+
     '<div class="fg"><label>Zona o municipio</label><input type="text" id="f-zone" value="' + (G.municipality || '') + '" placeholder="Selecciona el municipio arriba" readonly></div>'+
     '<div class="fg"><label>Tipo de local</label>'+makeOpts('localType',[
@@ -473,11 +799,15 @@ function goTurn4(){
       {v:'no',ic:'✅',t:'No aplica',d:'Listo para usar o es online'}
     ],'c4')+'</div>'+
     '<div class="fg"><label>Coste estimado de reforma (€)</label><input type="number" id="f-reform" placeholder="0" min="0"></div>'+
-    '<div class="fg"><label>Mobiliario y equipamiento necesario</label><textarea id="f-furn" placeholder="Lista lo que necesitas. Busca precios reales en internet."></textarea></div></div>'+
-    
+    '<div class="fg equipamiento"><label>Mobiliario y equipamiento necesario</label><p class="hn">El cuadro de amortización se calcula automáticamente con el coste y la categoría de cada elemento. Toma como fecha de inicio la fecha en que comenzaste esta partida.</p>'+
+    '<button type="button" class="btn bs equipo-buscar" data-radix-click="ayudaEquipamiento">🔎 Buscar mobiliario y equipamiento</button><p class="hn">Revisa y modifica la pregunta antes de buscarla en Google.</p>'+
+    '<div id="f-equipamiento-body" class="equipamiento-lista"></div>'+
+    '<div class="equipamiento-total"><span>Total de equipamiento</span><strong id="f-equipamiento-total">0 €</strong></div>'+
+    '<button type="button" class="btn bs equipo-agregar" data-radix-click="agregarEquipo">＋ Añadir producto</button></div></div>'+
+
   '<div class="cd"><div class="ci cib">🏷️</div><h2>Alquiler mensual</h2>'+
     '<div class="fg"><label>Alquiler mensual estimado (€/mes)</label><input type="number" id="f-rent4" placeholder="Ej: 600" min="0"><div class="hn" id="rentHintBox">Busca en Idealista o Fotocasa cuánto cuestan los locales en tu municipio. Selecciona isla y municipio para ver referencias.</div></div></div>'+
-  
+
   '<div class="cd"><div class="ci cib">📜</div><h2>Licencias para '+G.bizTypeLabel+'</h2>'+
     '<p data-radix-estilo="r20">Según tu tipo de negocio, necesitarás:</p><ul>'+licHtml+'</ul>'+
     '<div class="al al-i"><span class="ai">ℹ️</span>Para más información sobre este tipo de gestiones, acude a la Concejalía de Comercio del Ayuntamiento, a la Oficina del Emprendedor o a la Cámara de Comercio.</div></div>'+
@@ -491,6 +821,8 @@ function goTurn4(){
   '<div id="t4fb"></div>'+
   '<div class="bc"><button class="btn bs" data-radix-click="accion12">← Atrás</button><button class="btn bp" data-radix-click="accion13">Continuar a la Fase 5 →</button></div>';
 
+  radixRenderEquipamiento();
+  // Los campos editables del inventario se sincronizan con la partida al cambiar.
   // Listeners dinámicos de selección de isla y municipio
   setTimeout(function(){
     var ic=el('islaChoice');
@@ -508,29 +840,29 @@ function goTurn4(){
         sel.appendChild(opt);
       }
       el('munBox').classList.remove('hidden');
-      
+
       // Guardar datos temporales de la isla
       G.island = data.nombre;
       G.islandAdjective = data.adjetivo;
       G.rentHint = data.rentHint;
       G.localMedia = data.media;
-      
+
       // Actualizar el pie de página
       var fp = el('footer-plan'); if(fp) fp.innerHTML = '🌋 Plan Radix ' + G.island;
-      
+
       updateRentHintText();
     });
-    
+
     var sel = el('munSelect');
     if(sel) sel.addEventListener('change', function(){
       var mun = sel.value;
       G.municipality = mun;
       var fz = el('f-zone');
       if(fz) fz.value = mun;
-      
+
       // Actualizar el pie de página
       var fm = el('footer-municipio'); if(fm) fm.innerHTML = '🏛️ Emprendiendo en ' + G.municipality;
-      
+
       updateRentHintText();
     });
 
@@ -554,12 +886,12 @@ function saveTurn4(){
   var isl=getOpt('islaChoice');
   var mun=el('munSelect')?el('munSelect').value:'';
   if(!isl||!mun){el('t4fb').innerHTML='<div class="al al-w"><span class="ai">⚠️</span>Elige una isla y un municipio para continuar.</div>';return;}
-  
+
   G.locationType=getOpt('locType');
   G.locationZone=el('f-zone').value.trim();
   G.localType=getOpt('localType');
   G.reformLevel=getOpt('reformLvl');
-  G.furniture=el('f-furn').value.trim();G.locationChoice=getOpt('locChoice');
+  radixSincronizarEquipamiento();G.locationChoice=getOpt('locChoice');
   G.reformCostInput=parseFloat(el('f-reform').value)||0;
   var rent4=parseFloat(el('f-rent4')&&el('f-rent4').value)||0;
   if(rent4>=0) G.monthlyRent=rent4;
@@ -584,6 +916,7 @@ function saveTurn4(){
    ════════════════════════════════════════════════════════════ */
 function goTurn5(){
   G.turn=7;refreshDash();radixActualizarCodigoUI();goTop();
+  var totalEquipamiento=radixTotalCosteEquipamiento();
   area().innerHTML=turnImg(7)+
   '<div class="bn"><h2>Fase 7 — Inversión Inicial ⚡</h2>'+
     '<p><strong>'+G.name+'</strong>, vamos a poner números reales. ¿Cuánto cuesta abrir <strong>"'+G.bizName+'"</strong>?</p>'+
@@ -616,11 +949,10 @@ function goTurn5(){
       '<tr><td>Cuota mensual del local (1er mes)</td><td><input type="number" id="e-rent" value="'+(G.monthlyRent||0)+'" readonly data-radix-estilo="r26"></td></tr>'+
       '<tr><td>Fianza del local (2 meses)</td><td><input type="number" id="e-dep" value="'+Math.round((G.monthlyRent||0)*2)+'" readonly data-radix-estilo="r27"></td></tr>'+
       '<tr><td>Reforma del local</td><td><input type="number" id="e-ref" value="'+G.reformCostInput+'" readonly data-radix-estilo="r28"></td></tr>'+
-      '<tr><td>Mobiliario e inventario inicial</td><td><input type="number" id="e-furn" value="0"></td></tr>'+
+      '<tr><td>Mobiliario, maquinaria y equipamiento</td><td><input type="number" id="e-equip-total" value="'+totalEquipamiento+'" readonly data-radix-estilo="r26"></td></tr>'+
+      '<tr><td>Inventario inicial: existencias para vender o consumir</td><td><input type="number" id="e-inventory" min="0" step="0.01" value="'+(G.expenses.inventory||0)+'"></td></tr>'+
       '<tr><td>Suministros: agua, luz, internet</td><td><input type="number" id="e-sup" value="0"></td></tr>'+
       '<tr><td>Gastos legales: alta, asesoría, seguros</td><td><input type="number" id="e-leg" value="0"></td></tr>'+
-      '<tr><td>Maquinaria y herramientas</td><td><input type="number" id="e-maq" value="0"></td></tr>'+
-      '<tr><td>Software, suscripciones, web</td><td><input type="number" id="e-soft" value="0"></td></tr>'+
       '<tr><td>Marketing de lanzamiento</td><td><input type="number" id="e-mkt" value="0"></td></tr>'+
       '<tr class="tr-t"><td><strong>TOTAL GASTOS</strong></td><td><strong id="e-total">0 €</strong></td></tr>'+
     '</table></div></div>'+
@@ -664,8 +996,10 @@ function doLoan(){
 }
 
 function doTotal(){
-  var ids=['e-rent','e-dep','e-ref','e-furn','e-sup','e-leg','e-maq','e-soft','e-mkt'];
-  var tot=0;for(var i=0;i<ids.length;i++)tot+=(parseFloat(el(ids[i]).value)||0);
+  var ids=['e-rent','e-dep','e-ref','e-inventory','e-sup','e-leg','e-mkt'];
+  var tot=radixTotalCosteEquipamiento();
+  var equipo=el('e-equip-total');if(equipo)equipo.value=radixTotalCosteEquipamiento();
+  for(var i=0;i<ids.length;i++)tot+=(parseFloat(el(ids[i]).value)||0);
   G.totalInvestment=tot;
   el('e-total').textContent=fmt(tot)+' €';
   var cush=parseFloat(el('e-cush').value)||0;
@@ -710,7 +1044,8 @@ function saveTurn5(){
   G.capital=G.ownMoney+G.partnerMoney+G.loanAmount;
   G.capital-=G.mktInitialCost||0;
   G.capital-=G.hiringEventCost||0;
-  G.expenses={rent:parseFloat(el('e-rent').value)||0,deposit:parseFloat(el('e-dep').value)||0,reform:parseFloat(el('e-ref').value)||0,furniture:parseFloat(el('e-furn').value)||0,supplies:parseFloat(el('e-sup').value)||0,legal:parseFloat(el('e-leg').value)||0,machinery:parseFloat(el('e-maq').value)||0,software:parseFloat(el('e-soft').value)||0,marketing:parseFloat(el('e-mkt').value)||0,cushion:parseFloat(el('e-cush').value)||0,contingency:parseFloat(el('e-cont').value)||0};
+  var totalEquipamiento=radixTotalCosteEquipamiento();
+  G.expenses={rent:parseFloat(el('e-rent').value)||0,deposit:parseFloat(el('e-dep').value)||0,reform:parseFloat(el('e-ref').value)||0,furniture:totalEquipamiento,equipment:totalEquipamiento,inventory:parseFloat(el('e-inventory').value)||0,supplies:parseFloat(el('e-sup').value)||0,legal:parseFloat(el('e-leg').value)||0,machinery:0,software:0,marketing:parseFloat(el('e-mkt').value)||0,cushion:parseFloat(el('e-cush').value)||0,contingency:parseFloat(el('e-cont').value)||0};
   G.monthlyRent=G.expenses.rent;G.reformCost=G.expenses.reform;
   if(G.crisisChoice==='A'){G.capital-=4500;G.decisions.push({t:5,txt:'Asumiste coste eléctrico: -4.500 €',imp:-4500});}
   else if(G.crisisChoice==='B'){G.decisions.push({t:5,txt:'Negociaste reforma eléctrica: sin coste, 3 años permanencia',imp:0});}
@@ -1157,11 +1492,13 @@ function radixRestaurarFormulario(turn){
   var state=G._pageStates[String(turn)];
   var id,e,f;
 
+  if(Number(turn)===2 && state.nameIdeasGenerated) G.nameIdeasGenerated=true;
+
   if(state.fields){
     for(id in state.fields){
       if(!Object.prototype.hasOwnProperty.call(state.fields,id)) continue;
       e=el(id); f=state.fields[id];
-      if(!e || e.type==='file') continue;
+      if(!e || e.type==='file' || (Number(turn)===7 && id==='e-equip-total')) continue;
       if(typeof f.value!=='undefined') e.value=f.value;
       if('checked' in f) e.checked=!!f.checked;
       if(typeof f.selectedIndex==='number' && f.selectedIndex>=0 && typeof e.selectedIndex==='number') e.selectedIndex=f.selectedIndex;
@@ -1192,12 +1529,15 @@ function radixRestaurarFormulario(turn){
     }
   }
 
+  if(Number(turn)===2)radixActualizarAvisoFormacion();
+
   // Compatibilidad con guardados antiguos sin instantánea del campo.
   if(Number(turn)===2 && el('f-custom') &&
      (!state.fields || !state.fields['f-custom']) &&
      (!state.options || !state.options.bizName) && G.bizName){
     el('f-custom').value=G.bizName;
   }
+  if(Number(turn)===2) radixDesmarcarNombreGeneradoSiHayTexto();
 
   if(state.blocks){
     for(id in state.blocks){
@@ -1206,6 +1546,20 @@ function radixRestaurarFormulario(turn){
       if(e && typeof state.blocks[id]==='string') e.className=state.blocks[id];
     }
   }
+
+  if(Number(turn)===3){
+    var grupoEdadRestaurado=el('targetAges');
+    if(grupoEdadRestaurado){
+      var rangosRestaurados=(grupoEdadRestaurado.getAttribute('data-picked')||'').split(',');
+      grupoEdadRestaurado.querySelectorAll('input[type="checkbox"]').forEach(function(c){c.checked=rangosRestaurados.indexOf(c.value)>=0;});
+    }
+    var generoRestaurado=el('targetGender');
+    if(generoRestaurado && generoRestaurado.getAttribute('data-picked'))generoRestaurado.value=generoRestaurado.getAttribute('data-picked');
+    radixActualizarResumenEdad();
+  }
+
+  // El equipamiento procede de la fase 4; nunca restaurar un total antiguo.
+  if(Number(turn)===7 && el('e-equip-total')) doTotal();
 
   if(radixModoAyuntamientoSolicitado()){
     if(Number(turn)===5){if(el('empBox'))el('empBox').classList.remove('hidden');doSS();}
@@ -1513,7 +1867,8 @@ function radixWait(ms){ return new Promise(function(resolve){setTimeout(resolve,
 async function radixPrepararLogoPDF(clone, tipo){
   if (!radixLogoValido(G.logoData)) return;
   var cabecera = tipo === 'canvas' ? clone.querySelector('[data-radix-estilo="r72"]') :
-    (tipo === 'prevision' || tipo === 'plan_final') ? clone.querySelector('.rh') : null;
+    (tipo === 'prevision' || tipo === 'plan_final') ? clone.querySelector('.rh') :
+    tipo === 'amortizacion' ? clone.querySelector('.radix-amortizacion-header') : null;
   if (!cabecera) throw new Error('No se encontró la cabecera para el logo del PDF.');
   var imagen = document.createElement('img');
   imagen.className = 'radix-pdf-logo';
@@ -1548,7 +1903,9 @@ async function generarPDFActual(tipo, nombreArchivo, orientacion){
 
   var clone=source.cloneNode(true);
   clone.querySelectorAll('.no-print,button,#radixPdfStatus').forEach(function(e){e.remove();});
+  if(tipo==='amortizacion') clone.innerHTML=radixAmortizacionDocumentoHTML();
   clone.classList.add('radix-pdf-clone', orientacion==='landscape'?'radix-pdf-apaisado':'radix-pdf-vertical');
+  if(tipo==='amortizacion')clone.classList.add('radix-amortizacion-pdf-capture');
   await radixPrepararLogoPDF(clone,tipo);
   // Copiar el contenido dibujado de los <canvas> (Chart.js, etc.), ya que
   // cloneNode() clona el elemento pero NO copia los píxeles ya pintados.
@@ -1566,9 +1923,10 @@ async function generarPDFActual(tipo, nombreArchivo, orientacion){
   try{
     var canvas=await html2canvas(clone,{scale:2,useCORS:true,allowTaint:false,backgroundColor:'#fff',logging:false,windowWidth:clone.scrollWidth});
     var jsPDF=window.jspdf.jsPDF;
-    var pdf=new jsPDF({orientation:orientacion==='landscape'?'landscape':'portrait',unit:'mm',format:'a4',compress:true});
-    var pageW=orientacion==='landscape'?297:210;
-    var pageH=orientacion==='landscape'?210:297;
+    var formatoPDF=tipo==='amortizacion'?'a3':'a4';
+    var pdf=new jsPDF({orientation:orientacion==='landscape'?'landscape':'portrait',unit:'mm',format:formatoPDF,compress:true});
+    var pageW=tipo==='amortizacion'?420:orientacion==='landscape'?297:210;
+    var pageH=tipo==='amortizacion'?297:orientacion==='landscape'?210:297;
     var margin=8;
     var usableW=pageW-margin*2;
     var imgW=canvas.width;
@@ -1708,7 +2066,62 @@ async function guardarPDFPlanFinal(){
   try{avisarPDF('Generando y guardando el Plan de Negocio…');var r=await guardarPDFEnDrive('plan_final','03_Plan_de_Negocio_Final.pdf','portrait');avisarPDF(radixMensajePDF(r));}
   catch(e){console.error(e);avisarPDF('No se pudo generar el plan: '+e.message);}
 }
+async function guardarPDFAmortizacion(){
+  try{avisarPDF('Generando y guardando el Cuadro de amortización…');var r=await guardarPDFEnDrive('amortizacion','04_Cuadro_de_Amortizacion.pdf','landscape');avisarPDF(radixMensajePDF(r));}
+  catch(e){console.error(e);avisarPDF('No se pudo generar el cuadro de amortización: '+e.message);}
+}
 
+function descargarAmortizacionExcel(){
+  var calculo=radixCuadroActual();
+  function escapar(valor){return String(valor==null?'':valor).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c];});}
+  function celda(valor, estilo){
+    var numero=typeof valor==='number' && isFinite(valor);
+    return '<Cell'+(estilo?' ss:StyleID="'+estilo+'"':'')+'><Data ss:Type="'+(numero?'Number':'String')+'">'+escapar(valor)+'</Data></Cell>';
+  }
+  function fila(valores, estilo){return '<Row>'+valores.map(function(v){return celda(v,estilo);}).join('')+'</Row>';}
+  var cabeceras=['Partida contable','Bien','Fecha de adquisición','Coeficiente de amortización','Importe'].concat(calculo.anios,['Amortización acumulada','Diferencia']);
+  var filas=calculo.cuentas.map(function(c){return fila([c.partidaContable,c.bien,c.fechaAdquisicion,c.coeficiente+' %',c.importe].concat(c.cuotas,[c.acumulada,c.diferencia]));}).join('');
+  var totales=calculo.anios.map(function(_,i){return radixRedondearEuros(calculo.cuentas.reduce(function(s,c){return s+(c.cuotas[i]||0);},0));});
+  filas+=fila(['','TOTAL','','',calculo.resumen.coste].concat(totales,[calculo.resumen.amortizacionTotal,calculo.resumen.valorPendiente]),'total');
+  var xml='<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?>'+
+    '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'+
+    '<Styles><Style ss:ID="cabecera"><Font ss:Bold="1"/><Interior ss:Color="#E9DDE1" ss:Pattern="Solid"/><Alignment ss:WrapText="1"/></Style><Style ss:ID="total"><Font ss:Bold="1"/></Style></Styles>'+
+    '<Worksheet ss:Name="Amortización"><Table><Column ss:Width="100"/><Column ss:Width="180"/><Column ss:Width="110"/><Column ss:Width="130"/><Column ss:Width="100"/><Column ss:Width="85" ss:Span="15"/><Column ss:Width="140"/><Column ss:Width="100"/>'+
+    fila(['Cuadro de amortización — '+(G.bizName||'Negocio')],'total')+fila(['Régimen: '+radixRegimenAmortizacionEtiqueta()])+fila(cabeceras,'cabecera')+filas+'</Table></Worksheet></Workbook>';
+  var blob=new Blob(['\ufeff',xml],{type:'application/vnd.ms-excel;charset=utf-8'});
+  var url=URL.createObjectURL(blob), enlace=document.createElement('a');
+  enlace.href=url;enlace.download='Cuadro_de_amortizacion.xls';document.body.appendChild(enlace);enlace.click();enlace.remove();
+  setTimeout(function(){URL.revokeObjectURL(url);},1000);
+}
+
+function radixPlanEquipamientoHTML(){
+  var items=radixEquipamientoNormalizado().filter(function(i){return i.descripcion;});
+  if(!items.length)return '<p>No se ha detallado mobiliario ni equipamiento.</p>';
+  return '<div class="tw"><table><thead><tr><th>Descripción del producto</th><th>Categoría</th><th>Cantidad</th><th>Precio unitario</th><th>Precio Total</th></tr></thead><tbody>'+items.map(function(i){var total=i.cantidad*i.precioUnitario;return '<tr><td>'+radixEscaparHTML(i.descripcion)+'</td><td>'+radixEscaparHTML(i.categoria||'—')+'</td><td>'+fmt(i.cantidad)+'</td><td>'+fmt(i.precioUnitario)+' €</td><td>'+fmt(total)+' €</td></tr>';}).join('')+'</tbody></table></div>';
+}
+function radixAmortizacionDocumentoHTML(){
+  var calculo=radixCuadroActual();
+  var resumen=calculo.resumen;
+  var cuentas=calculo.cuentas, anios=calculo.anios;
+  var encabezados='<th>Partida contable</th><th>Bien</th><th>Fecha de adquisición</th><th>Coeficiente de amortización</th><th>Importe</th>'+anios.map(function(anio){return '<th>'+anio+'</th>';}).join('')+'<th>Amortización acumulada</th><th>Diferencia</th>';
+  var rows=cuentas.map(function(c){return '<tr><td>'+radixEscaparHTML(c.partidaContable)+'</td><td>'+radixEscaparHTML(c.bien)+'</td><td>'+c.fechaAdquisicion.split('-').reverse().join('/')+'</td><td>'+(c.coeficiente?fmt(c.coeficiente)+' %':'—')+'</td><td>'+fmt(c.importe)+' €</td>'+c.cuotas.map(function(cuota){return '<td>'+fmt(cuota)+' €</td>';}).join('')+'<td>'+fmt(c.acumulada)+' €</td><td>'+fmt(c.diferencia)+' €</td></tr>';}).join('');
+  var totales=anios.map(function(_,indice){return cuentas.reduce(function(suma,c){return suma+(c.cuotas[indice]||0);},0);});
+  var filaTotal='<tr class="radix-amortizacion-total"><td></td><td><strong>TOTAL</strong></td><td></td><td></td><td><strong>'+fmt(resumen.coste)+' €</strong></td>'+totales.map(function(total){return '<td><strong>'+fmt(total)+' €</strong></td>';}).join('')+'<td><strong>'+fmt(resumen.amortizacionTotal)+' €</strong></td><td><strong>'+fmt(resumen.valorPendiente)+' €</strong></td></tr>';
+  return '<div class="plan-final radix-amortizacion-pdf">'+
+    '<div class="rh radix-amortizacion-header"><p>Entregable financiero</p><h1>Cuadro de amortización</h1><p>'+radixEscaparHTML(G.bizName||'Negocio')+' · '+radixEscaparHTML(G.island||'Canarias')+'</p></div>'+
+    '<div class="cd"><p><strong>Régimen de referencia:</strong> '+radixEscaparHTML(radixRegimenAmortizacionEtiqueta())+'</p><p>El cuadro mantiene las columnas de la plantilla: 16 ejercicios desde el año de inicio de la partida, coeficiente, importe, amortización acumulada y diferencia pendiente. La primera cuota se prorratea por meses; el valor residual se asume cero.</p><p><strong>Coste incluido:</strong> '+fmt(resumen.coste)+' € · <strong>Amortización del primer año:</strong> '+fmt(resumen.amortizacionPrimerAnio)+' € · <strong>Diferencia pendiente tras 16 ejercicios:</strong> '+fmt(resumen.valorPendiente)+' €</p><p class="radix-amortizacion-nota">Tabla fiscal orientativa. El coste amortizable debe excluir el IGIC deducible e incluir el no recuperable, cuando corresponda.</p></div>'+
+    (rows?'<div class="cd radix-amortizacion-tabla-card"><h2>Cuadro de amortización</h2><div class="tw radix-amortizacion-tabla-wrap"><table class="radix-tabla-amortizacion"><thead><tr>'+encabezados+'</tr></thead><tbody>'+rows+filaTotal+'</tbody></table></div></div>':'<div class="cd"><p>No hay elementos amortizables completos. Completa descripción, categoría y coste en la fase 4.</p></div>')+
+    '</div>';
+}
+function radixAmortizacionResumenHTML(){
+  var calculo=radixCuadroActual(), resumen=calculo.resumen;
+  if(!resumen.coste)return '<p>Añade activos con categoría y coste en la fase 4 para calcular el cuadro.</p>';
+  var vistazo=calculo.cuentas.slice(0,8).map(function(c){return '<tr><td>'+radixEscaparHTML(c.bien)+'</td><td>'+fmt(c.cuotas[0]||0)+' €</td><td>'+fmt(c.acumulada)+' €</td><td>'+fmt(c.diferencia)+' €</td></tr>';}).join('');
+  return '<p><strong>Referencia:</strong> '+radixEscaparHTML(radixRegimenAmortizacionEtiqueta())+'. La primera cuota usa la fecha de inicio de la partida y se prorratea por meses.</p>'+
+    '<div class="plan-metrics-grid radix-amortizacion-metricas"><div class="al al-i"><div><strong>Coste de activos</strong><br>'+fmt(resumen.coste)+' €</div></div><div class="al al-i"><div><strong>Amortización del primer año de cada activo</strong><br>'+fmt(resumen.amortizacionPrimerAnio)+' €</div></div><div class="al al-i"><div><strong>Valor pendiente al final del cuadro</strong><br>'+fmt(resumen.valorPendiente)+' €</div></div></div>'+
+    (vistazo?'<div class="tw"><table class="radix-tabla-amortizacion"><thead><tr><th>Bien</th><th>Amortización inicial</th><th>Amortización acumulada</th><th>Diferencia</th></tr></thead><tbody>'+vistazo+'</tbody></table></div>':'<p>No hay activos con categoría de amortización seleccionada.</p>')+
+    '<p class="radix-amortizacion-nota">Importes orientativos; se debe revisar la tabla y el régimen fiscal aplicable al negocio.</p>';
+}
 function goPlanCanvas(){
   var modoAyuntamiento=radixModoAyuntamientoSolicitado();
   G.planScreen='canvas';
@@ -1735,7 +2148,7 @@ function goPlanCanvas(){
   document.body.classList.add('radix-print');
 
   var h=
-  '<div data-radix-estilo="r68">'+
+  '<div class="canvas-pantalla" data-radix-estilo="r68">'+
   '<div class="no-print" data-radix-estilo="r69">'+
     '<h2 data-radix-estilo="r70">📋 Business Model Canvas</h2><p data-radix-estilo="r71">Plan de negocio de <strong>'+G.bizName+'</strong></p>'+
   '</div>'+
@@ -1771,7 +2184,8 @@ function goPlanCanvas(){
     '<div class="canvas-pair" data-radix-estilo="r78">'+
       cBlock('❤️','5. Relación clientes',
         'Perfil: '+(G.targetDesc||'—')+'\n'+
-        'Edad: '+(G.targetAge||'—')+'\n'+
+        'Edad: '+(G.targetAge||'—')+'\n'+        'Género cliente: '+({hombre:'Hombre',mujer:'Mujer',indiferente:'Indiferente'}[G.targetGender]||'—')+'\n'+
+
         'Ingresos: '+(G.targetIncome||'—'),
         '#FCE4EC','#880E4F')+
       cBlock('📢','6. Canales',
@@ -1811,7 +2225,7 @@ function goPlanCanvas(){
   '</div>'+
 
   // BOTONES debajo del canvas
-  '<div class="no-print" data-radix-estilo="r80">'+
+  '<div class="no-print canvas-acciones" data-radix-estilo="r80">'+
     '<button class="btn bs" data-radix-click="accion31">📄 Guardar PDF</button><span id="radixPdfStatus" role="status" aria-live="polite"></span>'+
     (modoAyuntamiento
       ? '<button class="btn bp" data-radix-click="accion32">Empezar las 12 preguntas →</button>'
@@ -1900,7 +2314,7 @@ function goFinal(){
 
   area().innerHTML=
   '<div class="plan-final">'+
-  '<div class="rh"><p data-radix-estilo="r103">Plan de Negocio Final</p>'+ 
+  '<div class="rh"><p data-radix-estilo="r103">Plan de Negocio Final</p>'+
     '<h1>📋 '+G.bizName+'</h1><p>Generado a partir de tu simulación en 10 fases</p>'+
     '<p data-radix-estilo="r104"><span class="rb '+barCls+'" data-radix-estilo="r105">'+barTxt+' — '+G.bar+'%</span></p></div>'+
 
@@ -1924,7 +2338,7 @@ function goFinal(){
     '<p><strong>Misión:</strong> '+(G.mission||'—')+' | <strong>Visión:</strong> '+(G.vision||'—')+'</p></div>'+
 
   '<div class="cd"><div class="ci cig">🎯</div><h2>5. Cliente objetivo</h2>'+
-    '<p><strong>Público:</strong> '+(G.targetDesc||'—')+' | <strong>Edad:</strong> '+(G.targetAge||'—')+' | <strong>Tipo:</strong> '+(G.targetType||'—')+'</p>'+
+    '<p><strong>Público:</strong> '+(G.targetDesc||'—')+' | <strong>Edad:</strong> '+(G.targetAge||'—')+' | <strong>Género:</strong> '+({hombre:'Hombre',mujer:'Mujer',indiferente:'Indiferente'}[G.targetGender]||'—')+' | <strong>Tipo:</strong> '+(G.targetType||'—')+'</p>'+
     '<p><strong>Zona:</strong> '+(zn[G.targetZone]||'—')+' | <strong>Nivel:</strong> '+(inc[G.targetIncome]||'—')+'</p>'+
     '<div class="per"><div class="pav">👤</div><div class="pin"><h4>Buyer Persona</h4>'+
     '<p><strong>Necesidades:</strong> '+(G.targetNeeds||'Busca calidad en ' + G.municipality)+'</p>'+
@@ -1933,16 +2347,18 @@ function goFinal(){
   '<div class="cd"><div class="ci cib">📍</div><h2>6. Ubicación</h2>'+
     '<p><strong>Tipo:</strong> '+(loc[G.locationType]||'—')+' | <strong>Zona:</strong> '+G.locationZone+' | <strong>Alquiler:</strong> '+fmt(G.monthlyRent)+' €/mes | <strong>Reforma:</strong> '+fmt(G.reformCost)+' €</p></div>'+
 
+  '<div class="cd"><div class="ci cig">🪑</div><h2>6.1. Mobiliario y equipamiento</h2>'+radixPlanEquipamientoHTML()+'</div>'+
+  '<div class="cd radix-amortizacion-resumen"><div class="ci cio">📉</div><h2>6.2. Cuadro de amortización</h2>'+radixAmortizacionResumenHTML()+'<button class="btn bs no-print" data-radix-click="accion46">📄 Guardar cuadro de amortización en PDF</button> <button class="btn bs no-print" data-radix-click="descargarAmortizacionExcel">📊 Descargar cuadro en Excel</button></div>'+
+
   '<div class="cd"><div class="ci cio">💰</div><h2>7. Inversión inicial</h2>'+
     '<div class="tw"><table><tr><th>Concepto</th><th>€</th></tr>'+
     '<tr><td>Alquiler 1er mes</td><td>'+fmt(G.expenses.rent||0)+' €</td></tr>'+
     '<tr><td>Fianza</td><td>'+fmt(G.expenses.deposit||0)+' €</td></tr>'+
     '<tr><td>Reforma</td><td>'+fmt(G.expenses.reform||0)+' €</td></tr>'+
-    '<tr><td>Mobiliario</td><td>'+fmt(G.expenses.furniture||0)+' €</td></tr>'+
+    '<tr><td>Mobiliario, maquinaria y equipamiento (fase 4)</td><td>'+fmt(G.expenses.equipment!=null?G.expenses.equipment:G.expenses.furniture||0)+' €</td></tr>'+
+    '<tr><td>Inventario inicial</td><td>'+fmt(G.expenses.inventory||0)+' €</td></tr>'+
     '<tr><td>Suministros</td><td>'+fmt(G.expenses.supplies||0)+' €</td></tr>'+
     '<tr><td>Legales</td><td>'+fmt(G.expenses.legal||0)+' €</td></tr>'+
-    '<tr><td>Maquinaria</td><td>'+fmt(G.expenses.machinery||0)+' €</td></tr>'+
-    '<tr><td>Software/web</td><td>'+fmt(G.expenses.software||0)+' €</td></tr>'+
     '<tr><td>Marketing</td><td>'+fmt(G.expenses.marketing||0)+' €</td></tr>'+
     '<tr><td>Colchón</td><td>'+fmt(G.expenses.cushion||0)+' €</td></tr>'+
     '<tr><td>Imprevistos</td><td>'+fmt(G.expenses.contingency||0)+' €</td></tr>'+

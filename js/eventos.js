@@ -6,7 +6,7 @@ var RADIX_ACCIONES = {
   accion4: function(event, element) { if(event.key==='Enter')radixCargarPartida(el('radixLoadCode').value); },
   accion5: function(event, element) { radixCargarPartida(el('radixLoadCode').value); },
   accion6: function(event, element) { saveTurn1(); },
-  accion7: function(event, element) { genNames(); },
+  accion7: function(event, element) { genNames(true); },
   accion8: function(event, element) { radixVolverFase(2); },
   accion9: function(event, element) { saveTurn2(); },
   accion10: function(event, element) { radixVolverFase(3); },
@@ -45,6 +45,11 @@ var RADIX_ACCIONES = {
   accion43: function(event, element) { resolveWeek(); },
   accion44: function(event, element) { guardarPDFPrevision(); },
   accion45: function(event, element) { goFinal(); },
+  accion46: function(event, element) { guardarPDFAmortizacion(); },
+  descargarAmortizacionExcel: function(event, element) { descargarAmortizacionExcel(); },
+  ayudaEquipamiento: function(event, element) { radixAbrirAyudaEquipamiento(); },
+  agregarEquipo: function(event, element) { radixAgregarEquipo(); },
+  quitarEquipo: function(event, element) { radixQuitarEquipo(event, element); },
 };
 ['click','input','keydown'].forEach(function(tipo) {
   document.addEventListener(tipo, function(event) {
@@ -57,3 +62,8 @@ document.addEventListener('click', function(event) {
   var opcion = event.target.closest('[data-radix-accion=opcion]');
   if (opcion) (opcion.dataset.radixMultiple === '1' ? pickOptMulti : pickOpt)(opcion.dataset.radixGrupo, opcion);
 }, true);
+document.addEventListener('click', function(event) {
+  document.querySelectorAll('.edad-dropdown[open]').forEach(function(desplegable) {
+    if (!desplegable.contains(event.target)) desplegable.open = false;
+  });
+});
